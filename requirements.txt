@@ -1,1 +1,2 @@
+wheel~=0.38
 setuptools~=65.5
