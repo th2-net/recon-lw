@@ -319,17 +319,3 @@ def get_next_batch(streams, batch, b_len):
             continue
     return batch_pos
 
-
-if __name__ == '__main__':
-    messages = Data.from_cache_file("temp/recon_lw/lme/messages_lme.pickle")
-    result = message_utils.get_totals(messages,
-                                      [lambda m: m["sessionId"]],
-                                      lambda m: protocol(m) in ["FIX","LME_OE"])
-    split_messages_pickle_for_recons("temp/recon_lw/lme5/messages.pickle",
-                                     "temp/recon_lw/spl_lme5",
-                                     result.keys())
-
-    # change
-    t2 = datetime.now()
-    print("Finish ")
-
