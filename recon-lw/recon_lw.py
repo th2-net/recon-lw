@@ -332,6 +332,3 @@ if __name__ == '__main__':
     t2 = datetime.now()
     print("Finish ")
 
-#87663.7254902
-#66457.9454254
-
