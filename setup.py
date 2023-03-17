@@ -39,6 +39,6 @@ setup(
     license="Apache License 2.0",
     python_requires=">=3.7",
     install_requires=requirements,
-    packages=find_packages(include=["recon-lw*"]),
+    packages=find_packages(include=["recon_lw*"]),
     include_package_data=True,
 )
