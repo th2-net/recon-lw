@@ -9,4 +9,4 @@ types-protobuf==3.19.22
 importlib_metadata
 orjson~=3.8
 sortedcontainers
-th2-data-services[rdp5]~=1.4.0.dev
+th2-data-services[lwdp]~=2.0.0.dev
