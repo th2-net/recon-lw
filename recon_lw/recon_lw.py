@@ -188,9 +188,13 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
     for rule_key, rule_settings in rules_settings_dict.items():
         rule_settings["rule_root_event"] = create_event(rule_key, "LwReconRule",
                                                         event_sequence, parentId=root_event["eventId"])
-        rule_settings["match_index"] = {}
-        rule_settings["time_index"] = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
-        rule_settings["message_cache"] = {}
+        if "init_func" not in rule_settings:
+            rule_settings["init_func"] = init_matcher
+        if "collect_func" not in rule_settings:
+            rule_settings["collect_func"] = collect_matcher
+        if "flush_func" not in rule_settings:
+            rule_settings["flush_func"] = flush_matcher
+        rule_settings["init_func"](rule_settings)
 
     save_events_standalone([r["rule_root_event"] for r in rules_settings_dict.values()],
                            events_buffer,result_events_path)
@@ -209,41 +213,42 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
         if next_batch_len < buffer_len:
             buffer_to_process = message_buffer[:next_batch_len]
         for rule_settings in rules_settings_dict.values():
-            if "stream_processor" in rule_settings:
-                stream_processor = rule_settings["stream_processor"]
-                result_events = stream_processor(buffer_to_process, rule_settings)
-                for e in result_events:
-                    e["parentEventId"] = rule_settings["rule_root_event"]
-                save_events_standalone(result_events, events_buffer, result_events_path)
-
-            rule_match_func = rule_settings["rule_match_func"]
-            #one_one_match
-            rule_match_func(buffer_to_process, rule_settings)
+            rule_settings["collect_func"](buffer_to_process, rule_settings)
             ts = buffer_to_process[len(buffer_to_process)-1]["timestamp"]
-            rule_flush(ts,
-                       rule_settings["horizon_delay"],
-                       rule_settings["match_index"],
-                       rule_settings["time_index"],
-                       rule_settings["message_cache"],
-                       rule_settings["interpret_func"],
-                       event_sequence,
-                       lambda ev_batch: save_events_standalone(ev_batch, events_buffer, result_events_path),
-                       rule_settings["rule_root_event"])
-
+            rule_settings["flush_func"](ts, rule_settings, event_sequence,
+                                        lambda ev_batch: save_events_standalone(ev_batch, events_buffer,
+                                                                                result_events_path))
     #final flush
     for rule_settings in rules_settings_dict.values():
-        rule_flush(None,
-                   rule_settings["horizon_delay"],
-                   rule_settings["match_index"],
-                   rule_settings["time_index"],
-                   rule_settings["message_cache"],
-                   rule_settings["interpret_func"],
-                   event_sequence,
-                   lambda ev_batch: save_events_standalone(ev_batch, events_buffer, result_events_path),
-                   rule_settings["rule_root_event"])
+        rule_settings["flush_func"](None, rule_settings, event_sequence,
+                                    lambda ev_batch: save_events_standalone(ev_batch, events_buffer,
+                                                                            result_events_path))
     #one final flush
     if len(events_buffer) > 0:
         dump_buffer(events_buffer,result_events_path)
+
+
+def init_matcher(rule_settings):
+    rule_settings["match_index"] = {}
+    rule_settings["time_index"] = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
+    rule_settings["message_cache"] = {}
+
+
+def collect_matcher(batch, rule_settings):
+    rule_match_func = rule_settings["rule_match_func"]
+    rule_match_func(batch, rule_settings)
+
+
+def flush_matcher(ts,rule_settings,event_sequence, save_events_func):
+    rule_flush(ts,
+               rule_settings["horizon_delay"],
+               rule_settings["match_index"],
+               rule_settings["time_index"],
+               rule_settings["message_cache"],
+               rule_settings["interpret_func"],
+               event_sequence,
+               save_events_func,
+               rule_settings["rule_root_event"])
 
 
 def simplify_message(m):
