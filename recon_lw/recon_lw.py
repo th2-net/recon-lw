@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from sortedcontainers import SortedKeyList
-from th2_data_services import Data
+from th2_data_services.data import Data
 from th2_data_services.utils.message_utils import message_utils
 from os import listdir
 from os import path
