@@ -126,7 +126,7 @@ def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book
 
 def init_ob_stream(rule_settings):
     rule_settings["sequence_cache"] = {"sequence": SortedKeyList(key=lambda item: item[0]),
-                                       "times": SortedKeyList(key=lambda item: item[0]),
+                                       "times": SortedKeyList(key=lambda t: recon_lw.time_stamp_key(t[0])),
                                        "duplicates": SortedKeyList(key=lambda item: item[0])}
     rule_settings["books_cache"] = {}
 
