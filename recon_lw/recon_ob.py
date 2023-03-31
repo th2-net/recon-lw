@@ -41,10 +41,6 @@ def flush_sequence_get_collection(current_ts, horizon_delay, sequence_cache):
         edge_timestamp = {"epochSecond": current_ts["epochSecond"] - horizon_delay,
                           "nano": 0}
         horizon_edge = times.bisect_key_left(recon_lw.time_stamp_key(edge_timestamp))
-        print("##### bisecting times: ")
-        print("len(times) = ", len(times))
-        print("horizon_edge = ", horizon_edge)
-
         seq_index = times[horizon_edge][1]
         for i in range(0,horizon_edge):
             times.pop(0)
@@ -79,7 +75,7 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
         operation, parameters = update_book_rule(book, mess)
         result = operation(**parameters)
         if len(result) > 0:
-            result["operation"] = operation.func_name
+            result["operation"] = operation.__name__
             result["operation_params"] = parameters
             result["initial_book"] = initial_book
             result["book_id"] = book_id
@@ -93,7 +89,7 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
         results = check_book_rule(book, event_sequence)
         if results is not None:
             for r in results:
-                r["body"]["operation"] = operation.func_name
+                r["body"]["operation"] = operation.__name__
                 r["body"]["operation_params"] = parameters
                 r["body"]["initial_book"] = initial_book
                 r["body"]["book_id"] = book_id
