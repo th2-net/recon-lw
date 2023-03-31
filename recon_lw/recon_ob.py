@@ -38,6 +38,10 @@ def flush_sequence_get_collection(current_ts, horizon_delay, sequence_cache):
         edge_timestamp = {"epochSecond": current_ts["epochSecond"] - horizon_delay,
                           "nano": 0}
         horizon_edge = times.bisect_key_left(recon_lw.time_stamp_key(edge_timestamp))
+        print("##### bisecting times: ")
+        print("len(times) = ", len(times))
+        print("horizon_edge = ", horizon_edge)
+
         seq_index = times[horizon_edge][1]
         for i in range(0,horizon_edge):
             times.pop(0)
