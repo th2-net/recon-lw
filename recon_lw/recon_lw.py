@@ -284,7 +284,7 @@ def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_
 
         messages_session_out = messages.filter(lambda m: m["sessionId"] == s and m["direction"] == "OUT")
         print("Sorting ", s, " OUT ", datetime.now())
-        arr = load_to_list(messages_session_in, simplify)
+        arr = load_to_list(messages_session_out, simplify)
         arr.sort(key=lambda m: time_stamp_key(m["timestamp"]))
         messages_session_out_to_save = Data(arr)
 
