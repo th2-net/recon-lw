@@ -48,7 +48,7 @@ def flush_sequence_get_collection(current_ts, horizon_delay, sequence_cache):
         seq_index = times[horizon_edge][1]
         for i in range(0,horizon_edge):
             times.pop(0)
-        return sequence.irange(None, seq_index)
+        return sequence.irange(None, (seq_index,None))
     else:
         times.clear()
         return sequence
