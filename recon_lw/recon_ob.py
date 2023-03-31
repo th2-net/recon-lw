@@ -4,6 +4,7 @@ from th2_data_services.utils.message_utils import message_utils
 from recon_lw import recon_lw
 import copy
 
+
 def sequence_cache_add(seq_num, ts, m, sequence_cache):
     seq_element = (seq_num, m)
     sequence = sequence_cache["sequence"]
@@ -66,28 +67,41 @@ def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book
             events.append(gap_event)
             continue
 
-        book_id = get_book_id_func(mess)
+        book_id, result = get_book_id_func(mess)
+        if result is not None:
+            book_id_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"],"SeqGap",event_sequence,
+                                                  ok=False,
+                                                  body=result ,
+                                                  parentId=parent_event["eventId"])
+            book_id_event["attachedMessageIds"] = [mess["messageId"]]
+            events.append(book_id_event)
+
         if book_id is not None:
             if book_id not in books_cache:
                 books_cache[book_id] = {"ask": {}, "bid": {}}
             book = books_cache[book_id]
             initial_book = copy.deepcopy(book)
-            operation, parameters = update_book_rule(book, mess, event_sequence)
+            operation, parameters = update_book_rule(book, mess)
             result = operation(**parameters)
             if len(result)>0:
                 result["operation"] = operation.func_name
                 result["operation_params"] = parameters
                 result["initial_book"] = initial_book
+                result["book_id"] = book_id
                 update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
                                                      event_sequence,
                                                      ok=False,
                                                      body=result,
                                                      parentId=parent_event["eventId"])
-                update_event["attachedMessageIds"] = mess["messageId"]
+                update_event["attachedMessageIds"] = [mess["messageId"]]
                 events.append(update_event)
             results = check_book_rule(book, event_sequence)
             if results is not None:
                 for r in results:
+                    r["body"]["operation"] = operation.func_name
+                    r["body"]["operation_params"] = parameters
+                    r["body"]["initial_book"] = initial_book
+                    r["body"]["book_id"] = book_id
                     r["parentEventId"] = parent_event["eventId"]
                     events.append(r)
         n_processed += 1
@@ -162,6 +176,8 @@ def ob_update_order(order_id, price, size, order_book):
         order_book[old_side][old_price][order_id] = size
     else:
         order_book[old_side][old_price].pop(order_id)
+        if len(order_book[old_side][old_price]) == 0:
+            order_book[old_side].pop(old_price)
         order_book[old_side][price][order_id] = size
 
     return {}
@@ -175,6 +191,26 @@ def ob_delete_order(order_id, order_book):
         return result_body
 
     order_book[old_side][old_price].pop(order_id)
+    if len(order_book[old_side][old_price]) == 0:
+        order_book[old_side].pop(old_price)
+    return {}
+
+
+def ob_trade_order(order_id, traded_size ,order_book):
+    result_body = {}
+    old_side, old_price, old_size = find_order_position(order_id, order_book)
+    if old_side is None:
+        result_body["error"] = order_id + " not found"
+        return result_body
+    if traded_size > old_size:
+        result_body["error"] = "traded size > resting size"
+        return result_body
+    elif traded_size == old_size:
+        order_book[old_side][old_price].pop(order_id)
+        if len(order_book[old_side][old_price]) == 0:
+            order_book[old_side].pop(old_price)
+    else:
+        order_book[old_side][old_price][order_id] -= traded_size
     return {}
 
 
