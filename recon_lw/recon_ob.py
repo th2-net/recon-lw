@@ -188,6 +188,8 @@ def ob_update_order(order_id, price, size, order_book):
         order_book[old_side][old_price].pop(order_id)
         if len(order_book[old_side][old_price]) == 0:
             order_book[old_side].pop(old_price)
+        if price not in order_book[old_side]:
+            order_book[old_side][price] = {}
         order_book[old_side][price][order_id] = size
 
     return {}
