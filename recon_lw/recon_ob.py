@@ -29,6 +29,9 @@ def sequence_cache_add(seq_num, ts, m, sequence_cache):
                 times.add((ts, seq_num))
             else:
                 duplicates.add((seq_num,m["messageId"], sequence[seq_num-first_elem][1]["messageId"]))
+    else:
+        sequence.add(seq_element)
+        times.add((ts, seq_num))
 
 
 def flush_sequence_get_collection(current_ts, horizon_delay, sequence_cache):
