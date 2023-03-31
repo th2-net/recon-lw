@@ -53,6 +53,47 @@ def flush_sequence_clear_cache(processed_len, sequence_cache):
         sequence.pop(0)
 
 
+def process_market_data_update(mess, events,  books_cache, get_book_id_func ,update_book_rule,
+                               check_book_rule, event_sequence, parent_event):
+    book_id, result = get_book_id_func(mess)
+    if result is not None:
+        book_id_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"], "SeqGap", event_sequence,
+                                              ok=False,
+                                              body=result,
+                                              parentId=parent_event["eventId"])
+        book_id_event["attachedMessageIds"] = [mess["messageId"]]
+        events.append(book_id_event)
+
+    if book_id is not None:
+        if book_id not in books_cache:
+            books_cache[book_id] = {"ask": {}, "bid": {}}
+        book = books_cache[book_id]
+        initial_book = copy.deepcopy(book)
+        operation, parameters = update_book_rule(book, mess)
+        result = operation(**parameters)
+        if len(result) > 0:
+            result["operation"] = operation.func_name
+            result["operation_params"] = parameters
+            result["initial_book"] = initial_book
+            result["book_id"] = book_id
+            update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
+                                                 event_sequence,
+                                                 ok=False,
+                                                 body=result,
+                                                 parentId=parent_event["eventId"])
+            update_event["attachedMessageIds"] = [mess["messageId"]]
+            events.append(update_event)
+        results = check_book_rule(book, event_sequence)
+        if results is not None:
+            for r in results:
+                r["body"]["operation"] = operation.func_name
+                r["body"]["operation_params"] = parameters
+                r["body"]["initial_book"] = initial_book
+                r["body"]["book_id"] = book_id
+                r["parentEventId"] = parent_event["eventId"]
+                events.append(r)
+
+
 def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book_rule,
                      check_book_rule, event_sequence, send_events_func, parent_event):
     events = []
@@ -66,44 +107,10 @@ def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book
                                               body={"seq_num": seq} ,parentId=parent_event["eventId"])
             events.append(gap_event)
             continue
-
-        book_id, result = get_book_id_func(mess)
-        if result is not None:
-            book_id_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"],"SeqGap",event_sequence,
-                                                  ok=False,
-                                                  body=result ,
-                                                  parentId=parent_event["eventId"])
-            book_id_event["attachedMessageIds"] = [mess["messageId"]]
-            events.append(book_id_event)
-
-        if book_id is not None:
-            if book_id not in books_cache:
-                books_cache[book_id] = {"ask": {}, "bid": {}}
-            book = books_cache[book_id]
-            initial_book = copy.deepcopy(book)
-            operation, parameters = update_book_rule(book, mess)
-            result = operation(**parameters)
-            if len(result)>0:
-                result["operation"] = operation.func_name
-                result["operation_params"] = parameters
-                result["initial_book"] = initial_book
-                result["book_id"] = book_id
-                update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
-                                                     event_sequence,
-                                                     ok=False,
-                                                     body=result,
-                                                     parentId=parent_event["eventId"])
-                update_event["attachedMessageIds"] = [mess["messageId"]]
-                events.append(update_event)
-            results = check_book_rule(book, event_sequence)
-            if results is not None:
-                for r in results:
-                    r["body"]["operation"] = operation.func_name
-                    r["body"]["operation_params"] = parameters
-                    r["body"]["initial_book"] = initial_book
-                    r["body"]["book_id"] = book_id
-                    r["parentEventId"] = parent_event["eventId"]
-                    events.append(r)
+        chunk = message_utils.expand_message(mess)
+        for m_upd in chunk:
+            process_market_data_update(m_upd, events, books_cache, get_book_id_func, update_book_rule,
+                                       check_book_rule, event_sequence, parent_event)
         n_processed += 1
 
     send_events_func(events)
