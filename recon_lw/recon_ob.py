@@ -24,8 +24,8 @@ def sequence_cache_add(seq_num, ts, m, sequence_cache):
             sequence.add(seq_element)
             times.add((ts, seq_num))
         else:
-            if "gap" in sequence[seq_num-first_elem][1]:
-                sequence[seq_num - first_elem] = seq_element
+            if "gap" in sequence[seq_num-first_elem[0]][1]:
+                sequence[seq_num - first_elem[0]] = seq_element
                 times.add((ts, seq_num))
             else:
                 duplicates.add((seq_num,m["messageId"], sequence[seq_num-first_elem][1]["messageId"]))
