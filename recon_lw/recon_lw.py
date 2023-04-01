@@ -173,7 +173,8 @@ def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
          "eventType": type,
          "body": body,
          "parentEventId": parentId,
-         "startTimestamp": {"epochSecond": int(ts.timestamp()),"nano": ts.microsecond*1000}}
+         "startTimestamp": {"epochSecond": int(ts.timestamp()),"nano": ts.microsecond*1000},
+         "attachedMessageIds": []}
     return e
 
 
