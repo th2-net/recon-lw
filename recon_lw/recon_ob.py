@@ -92,9 +92,9 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
         if results is not None:
             for r in results:
                 if not r["successful"]:
-                    r["body"]["operation"] = operation.__name__
                     r["body"]["operation_params"] = initial_parameters
                     r["body"]["initial_book"] = initial_book
+                r["body"]["operation"] = operation.__name__
                 r["body"]["book_id"] = book_id
                 r["parentEventId"] = parent_event["eventId"]
                 r["attachedMessageIds"] = [mess["messageId"]]
