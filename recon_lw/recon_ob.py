@@ -73,10 +73,12 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
         book = books_cache[book_id]
         initial_book = copy.deepcopy(book)
         operation, parameters = update_book_rule(book, mess)
+        ititial_paramaters = copy.copy(parameters)
+        parameters["order_book"] = book
         result = operation(**parameters)
         if len(result) > 0:
             result["operation"] = operation.__name__
-            result["operation_params"] = parameters
+            result["operation_params"] = ititial_paramaters
             result["initial_book"] = initial_book
             result["book_id"] = book_id
             update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
@@ -89,11 +91,13 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
         results = check_book_rule(book, event_sequence)
         if results is not None:
             for r in results:
-                r["body"]["operation"] = operation.__name__
-                r["body"]["operation_params"] = parameters
-                r["body"]["initial_book"] = initial_book
+                if not r["successful"]:
+                    r["body"]["operation"] = operation.__name__
+                    r["body"]["operation_params"] = ititial_paramaters
+                    r["body"]["initial_book"] = initial_book
                 r["body"]["book_id"] = book_id
                 r["parentEventId"] = parent_event["eventId"]
+                r["attachedMessageIds"] = [mess["messageId"]]
                 events.append(r)
 
 
