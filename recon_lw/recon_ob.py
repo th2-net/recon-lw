@@ -69,16 +69,16 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
 
     if book_id is not None:
         if book_id not in books_cache:
-            books_cache[book_id] = {"ask": {}, "bid": {}}
+            books_cache[book_id] = {"ask": {}, "bid": {}, "status": "?"}
         book = books_cache[book_id]
         initial_book = copy.deepcopy(book)
         operation, parameters = update_book_rule(book, mess)
-        ititial_paramaters = copy.copy(parameters)
+        initial_parameters = copy.copy(parameters)
         parameters["order_book"] = book
         result = operation(**parameters)
         if len(result) > 0:
             result["operation"] = operation.__name__
-            result["operation_params"] = ititial_paramaters
+            result["operation_params"] = initial_parameters
             result["initial_book"] = initial_book
             result["book_id"] = book_id
             update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
@@ -93,7 +93,7 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
             for r in results:
                 if not r["successful"]:
                     r["body"]["operation"] = operation.__name__
-                    r["body"]["operation_params"] = ititial_paramaters
+                    r["body"]["operation_params"] = initial_parameters
                     r["body"]["initial_book"] = initial_book
                 r["body"]["book_id"] = book_id
                 r["parentEventId"] = parent_event["eventId"]
@@ -227,6 +227,11 @@ def ob_trade_order(order_id, traded_size ,order_book):
             order_book[old_side].pop(old_price)
     else:
         order_book[old_side][old_price][order_id] -= traded_size
+    return {}
+
+
+def ob_change_status(new_status, order_book):
+    order_book["status"] = new_status
     return {}
 
 
