@@ -25,7 +25,8 @@ def sequence_cache_add(seq_num, ts, m, sequence_cache):
             times.add((ts, seq_num))
         else:
             if "gap" in sequence[seq_num-first_elem[0]][1]:
-                sequence[seq_num - first_elem[0]] = seq_element
+                del sequence[seq_num - first_elem[0]]
+                sequence.add(seq_element)
                 times.add((ts, seq_num))
             else:
                 duplicates.add((seq_num,m["messageId"], sequence[seq_num-first_elem[0]][1]["messageId"]))
@@ -241,3 +242,48 @@ def find_order_position(order_id, order_book):
             if order_id in orders:
                 return side, pr, orders[order_id]
     return None, None, None
+
+
+def ob_aggr_add_level(side, level, price, qty, num_orders, impl_qty, iml_num_orders, order_book):
+    result_body = {}
+    max_levels = order_book["aggr_max_levels"]
+    side_key = side+"_aggr"
+    new_index = level - 1
+    if not 0 <= new_index <= len(order_book[side_key]):
+        result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
+        return result_body
+
+    new_level = {"price": price, "qty": qty, "num_orders": num_orders, "impl_qty" : impl_qty, "impl_num_orders": iml_num_orders}
+    order_book[side_key].insert(new_index, new_level)
+    if len(order_book[side_key]) == max_levels+1:
+        order_book[side_key].pop()
+
+    return {}
+
+
+def ob_aggr_delete_level(side, level, order_book):
+    result_body = {}
+    side_key = side+"_aggr"
+    del_index = level - 1
+    if not 0 <= del_index < len(order_book[side_key]):
+        result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
+        return result_body
+
+    order_book[side_key].pop(del_index)
+
+    return {}
+
+
+def ob_aggr_update_level(side, level, price, qty, num_orders, impl_qty, iml_num_orders, order_book):
+    result_body = {}
+    max_levels = order_book["aggr_max_levels"]
+    side_key = side+"_aggr"
+    update_index = level - 1
+    if not 0 <= update_index < len(order_book[side_key]):
+        result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
+        return result_body
+
+    upd_level = {"price": price, "qty": qty, "num_orders": num_orders, "impl_qty" : impl_qty, "impl_num_orders": iml_num_orders}
+    order_book[side_key][update_index].update(upd_level)
+
+    return {}
