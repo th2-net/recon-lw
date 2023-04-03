@@ -244,7 +244,7 @@ def find_order_position(order_id, order_book):
     return None, None, None
 
 
-def ob_aggr_add_level(side, level, price, qty, num_orders, impl_qty, iml_num_orders, order_book):
+def ob_aggr_add_level(side, level, price, qty, num_orders, impl_qty, impl_num_orders, order_book):
     result_body = {}
     max_levels = order_book["aggr_max_levels"]
     side_key = side+"_aggr"
@@ -253,7 +253,8 @@ def ob_aggr_add_level(side, level, price, qty, num_orders, impl_qty, iml_num_ord
         result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
         return result_body
 
-    new_level = {"price": price, "qty": qty, "num_orders": num_orders, "impl_qty" : impl_qty, "impl_num_orders": iml_num_orders}
+    new_level = {"price": price, "qty": qty, "num_orders": num_orders, "impl_qty": impl_qty,
+                 "impl_num_orders": impl_num_orders}
     order_book[side_key].insert(new_index, new_level)
     if len(order_book[side_key]) == max_levels+1:
         order_book[side_key].pop()
