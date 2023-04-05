@@ -173,7 +173,8 @@ def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
          "eventType": type,
          "body": body,
          "parentEventId": parentId,
-         "startTimestamp": {"epochSecond": int(ts.timestamp()),"nano": ts.microsecond*1000}}
+         "startTimestamp": {"epochSecond": int(ts.timestamp()),"nano": ts.microsecond*1000},
+         "attachedMessageIds": []}
     return e
 
 
@@ -263,12 +264,19 @@ def simplify_message(m):
     return mm
 
 
-def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_list):
+def load_to_list(messages, simplify):
+    if simplify:
+        return list(map(simplify_message, messages))
+    else:
+        return list(messages)
+
+
+def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_list, simplify=True):
     messages = Data.from_cache_file(message_pickle_path)
     for s in sessions_list:
         messages_session_in = messages.filter(lambda m: m["sessionId"] == s and m["direction"] == "IN")
         print("Sorting ", s, " IN ", datetime.now())
-        arr = list(map(simplify_message, messages_session_in))
+        arr = load_to_list(messages_session_in, simplify)
         arr.sort(key=lambda m: time_stamp_key(m["timestamp"]))
         messages_session_in_to_save = Data(arr)
         file_name = output_path + "/" + s + "_IN.pickle"
@@ -277,7 +285,7 @@ def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_
 
         messages_session_out = messages.filter(lambda m: m["sessionId"] == s and m["direction"] == "OUT")
         print("Sorting ", s, " OUT ", datetime.now())
-        arr = list(map(simplify_message, messages_session_out))
+        arr = load_to_list(messages_session_out, simplify)
         arr.sort(key=lambda m: time_stamp_key(m["timestamp"]))
         messages_session_out_to_save = Data(arr)
 
