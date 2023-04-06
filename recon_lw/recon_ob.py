@@ -61,7 +61,7 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
                                check_book_rule, event_sequence, parent_event):
     book_id, result = get_book_id_func(mess)
     if result is not None:
-        book_id_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"], "SeqGap", event_sequence,
+        book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor", event_sequence,
                                               ok=False,
                                               body=result,
                                               parentId=parent_event["eventId"])
@@ -137,7 +137,8 @@ def collect_ob_stream(next_batch, rule_dict):
     sequence_timestamp_extract = rule_dict["sequence_timestamp_extract"]
     for m in next_batch:
         seq, ts = sequence_timestamp_extract(m)
-        sequence_cache_add(seq, ts, m, sequence_cache)
+        if seq is not None:
+            sequence_cache_add(seq, ts, m, sequence_cache)
 
 
 def flush_ob_stream(ts,rule_settings,event_sequence, save_events_func):
