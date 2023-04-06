@@ -141,7 +141,7 @@ def collect_ob_stream(next_batch, rule_dict):
         #seq, ts = sequence_timestamp_extract(m)
         if seq_list is not None:
             for mess, seq, ts in seq_list:
-                sequence_cache_add(seq, ts, m, sequence_cache)
+                sequence_cache_add(seq, ts, mess, sequence_cache)
 
 
 def flush_ob_stream(ts,rule_settings,event_sequence, save_events_func):
