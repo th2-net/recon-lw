@@ -61,7 +61,7 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
                                check_book_rule, event_sequence, parent_event):
     book_id, result = get_book_id_func(mess)
     if result is not None:
-        book_id_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"], "SeqGap", event_sequence,
+        book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor", event_sequence,
                                               ok=False,
                                               body=result,
                                               parentId=parent_event["eventId"])
