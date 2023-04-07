@@ -81,6 +81,8 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
         book = books_cache[book_id]
         initial_book = copy.deepcopy(book)
         operation, parameters = update_book_rule(book, mess)
+        if operation is None:
+            return 
         initial_parameters = copy.copy(parameters)
         parameters["order_book"] = book
         result = operation(**parameters)
