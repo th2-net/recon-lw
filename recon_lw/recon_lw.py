@@ -202,7 +202,7 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
     if sessions_list is not None and len(sessions_list):
         sessions_set = set(sessions_list)
         streams = open_streams(message_pickle_path,
-                               lambda n: n[:n.index("-")] in sessions_set)
+                               lambda n: n[:n.index("_IN")] in sessions_set or n[:n.index("_OUT")] in sessions_set)
     else:
         streams = open_streams(message_pickle_path)
 
