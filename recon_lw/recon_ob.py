@@ -38,14 +38,21 @@ def sequence_cache_add(seq_num, ts, m, sequence_cache):
 def flush_sequence_get_collection(current_ts, horizon_delay, sequence_cache):
     times = sequence_cache["times"]
     sequence = sequence_cache["sequence"]
+    sub_seq = None
     if current_ts is not None:
         edge_timestamp = {"epochSecond": current_ts["epochSecond"] - horizon_delay,
                           "nano": 0}
         horizon_edge = times.bisect_key_left(recon_lw.time_stamp_key(edge_timestamp))
-        seq_index = times[horizon_edge][1]
-        for i in range(0,horizon_edge):
-            times.pop(0)
-        return sequence.irange(None, (seq_index,None))
+        if horizon_edge < len(times):
+            seq_index = times[horizon_edge][1]
+            sub_seq = sequence.irange(None, (seq_index,None))
+            for i in range(0,horizon_edge):
+                times.pop(0)
+        else:
+            sub_seq = sequence
+            times.clear()
+
+        return sub_seq
     else:
         times.clear()
         return sequence
