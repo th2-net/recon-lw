@@ -288,7 +288,7 @@ def ob_aggr_delete_level(side, level, order_book):
     return {}
 
 
-def ob_aggr_update_level(side, level, price, qty, num_orders, impl_qty, iml_num_orders, order_book):
+def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty, iml_num_orders, order_book):
     result_body = {}
     max_levels = order_book["aggr_max_levels"]
     side_key = side+"_aggr"
@@ -297,7 +297,25 @@ def ob_aggr_update_level(side, level, price, qty, num_orders, impl_qty, iml_num_
         result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
         return result_body
 
-    upd_level = {"price": price, "qty": qty, "num_orders": num_orders, "impl_qty" : impl_qty, "impl_num_orders": iml_num_orders}
+    upd_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders, 
+                 "impl_qty" : impl_qty, "impl_num_orders": iml_num_orders}
     order_book[side_key][update_index].update(upd_level)
 
     return {}
+
+
+def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_impl_n_orders,
+                  bid_price, bid_real_qty, bid_impl_qty, bid_real_n_orders, bid_impl_n_orders,
+                  order_book):
+    order_book["ask_price"] = ask_price
+    order_book["ask_real_qty"] = ask_real_qty
+    order_book["ask_impl_qty"] = ask_impl_qty
+    order_book["ask_real_n_orders"] = ask_real_n_orders
+    order_book["ask_impl_n_orders"] = ask_impl_n_orders
+    order_book["bid_price"] = bid_price
+    order_book["bid_real_qty"] = bid_real_qty
+    order_book["bid_impl_qty"] = bid_impl_qty
+    order_book["bid_real_n_orders"] = bid_real_n_orders
+    order_book["bid_impl_n_orders"] = bid_impl_n_orders
+
+    
