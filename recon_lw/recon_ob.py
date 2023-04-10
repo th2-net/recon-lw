@@ -290,7 +290,7 @@ def ob_aggr_delete_level(side, level, order_book):
     return {}
 
 
-def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty, iml_num_orders, order_book):
+def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
     result_body = {}
     max_levels = order_book["aggr_max_levels"]
     side_key = side+"_aggr"
@@ -300,7 +300,7 @@ def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty
         return result_body
 
     upd_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders, 
-                 "impl_qty" : impl_qty, "impl_num_orders": iml_num_orders}
+                 "impl_qty" : impl_qty, "impl_num_orders": impl_num_orders}
     order_book[side_key][update_index].update(upd_level)
 
     return {}
