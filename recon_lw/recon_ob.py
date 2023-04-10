@@ -270,7 +270,7 @@ def ob_aggr_add_level(side, level, price, real_qty, real_num_orders, impl_qty, i
         result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
         return result_body
 
-    new_level = {"price": price, "qty": qty, "num_orders": num_orders, "impl_qty": impl_qty,
+    new_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders, "impl_qty": impl_qty,
                  "impl_num_orders": impl_num_orders}
     order_book[side_key].insert(new_index, new_level)
     if len(order_book[side_key]) == max_levels+1:
