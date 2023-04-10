@@ -65,7 +65,7 @@ def flush_sequence_clear_cache(processed_len, sequence_cache):
 
 
 def process_market_data_update(mess, events,  books_cache, get_book_id_func ,update_book_rule,
-                               check_book_rule, event_sequence, parent_event):
+                               check_book_rule, event_sequence, parent_event, initial_book_params):
     book_id, result = get_book_id_func(mess)
     if result is not None:
         book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor", event_sequence,
@@ -77,7 +77,8 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
 
     if book_id is not None:
         if book_id not in books_cache:
-            books_cache[book_id] = {"ask": {}, "bid": {}, "status": "?"}
+            books_cache[book_id] = copy.deepcopy(initial_book_params)            
+            #books_cache[book_id] = {"ask": {}, "bid": {}, "status": "?"}
         book = books_cache[book_id]
         initial_book = copy.deepcopy(book)
         operation, parameters = update_book_rule(book, mess)
@@ -112,7 +113,7 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
 
 
 def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book_rule,
-                     check_book_rule, event_sequence, send_events_func, parent_event):
+                     check_book_rule, event_sequence, send_events_func, parent_event, initial_book_params):
     events = []
     n_processed = 0
     for m in sequenced_batch:
@@ -127,7 +128,7 @@ def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book
         chunk = message_utils.expand_message(mess)
         for m_upd in chunk:
             process_market_data_update(m_upd, events, books_cache, get_book_id_func, update_book_rule,
-                                       check_book_rule, event_sequence, parent_event)
+                                       check_book_rule, event_sequence, parent_event, initial_book_params)
         n_processed += 1
 
     send_events_func(events)
@@ -162,7 +163,8 @@ def flush_ob_stream(ts,rule_settings,event_sequence, save_events_func):
                                    rule_settings["check_book_rule"],
                                    event_sequence,
                                    save_events_func,
-                                   rule_settings["rule_root_event"])
+                                   rule_settings["rule_root_event"].
+                                   rule_settings["initial_book_params"])
     ## Process duplicated
     duplicates = rule_settings["sequence_cache"]["duplicates"]
     n_dupl = len(duplicates)
