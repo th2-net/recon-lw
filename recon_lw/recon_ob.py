@@ -163,7 +163,7 @@ def flush_ob_stream(ts,rule_settings,event_sequence, save_events_func):
                                    rule_settings["check_book_rule"],
                                    event_sequence,
                                    save_events_func,
-                                   rule_settings["rule_root_event"].
+                                   rule_settings["rule_root_event"],
                                    rule_settings["initial_book_params"])
     ## Process duplicated
     duplicates = rule_settings["sequence_cache"]["duplicates"]
