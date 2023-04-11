@@ -80,36 +80,38 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
             books_cache[book_id] = copy.deepcopy(initial_book_params)            
             #books_cache[book_id] = {"ask": {}, "bid": {}, "status": "?"}
         book = books_cache[book_id]
-        initial_book = copy.deepcopy(book)
-        operation, parameters = update_book_rule(book, mess)
-        if operation is None:
-            return 
-        initial_parameters = copy.copy(parameters)
-        parameters["order_book"] = book
-        result = operation(**parameters)
-        if len(result) > 0:
-            result["operation"] = operation.__name__
-            result["operation_params"] = initial_parameters
-            result["initial_book"] = initial_book
-            result["book_id"] = book_id
-            update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
-                                                 event_sequence,
-                                                 ok=False,
-                                                 body=result,
-                                                 parentId=parent_event["eventId"])
-            update_event["attachedMessageIds"] = [mess["messageId"]]
-            events.append(update_event)
-        results = check_book_rule(book, event_sequence)
-        if results is not None:
-            for r in results:
-                if not r["successful"]:
-                    r["body"]["operation_params"] = initial_parameters
-                    r["body"]["initial_book"] = initial_book
-                r["body"]["operation"] = operation.__name__
-                r["body"]["book_id"] = book_id
-                r["parentEventId"] = parent_event["eventId"]
-                r["attachedMessageIds"] = [mess["messageId"]]
-                events.append(r)
+        operations = update_book_rule(book, mess)
+        if operations is None:
+            return
+        
+        for operation, parameters in operations:
+            initial_book = copy.deepcopy(book)
+            initial_parameters = copy.copy(parameters)
+            parameters["order_book"] = book
+            result = operation(**parameters)
+            if len(result) > 0:
+                result["operation"] = operation.__name__
+                result["operation_params"] = initial_parameters
+                result["initial_book"] = initial_book
+                result["book_id"] = book_id
+                update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
+                                                     event_sequence,
+                                                     ok=False,
+                                                     body=result,
+                                                     parentId=parent_event["eventId"])
+                update_event["attachedMessageIds"] = [mess["messageId"]]
+                events.append(update_event)
+            results = check_book_rule(book, event_sequence)
+            if results is not None:
+                for r in results:
+                    if not r["successful"]:
+                        r["body"]["operation_params"] = initial_parameters
+                        r["body"]["initial_book"] = initial_book
+                    r["body"]["operation"] = operation.__name__
+                    r["body"]["book_id"] = book_id
+                    r["parentEventId"] = parent_event["eventId"]
+                    r["attachedMessageIds"] = [mess["messageId"]]
+                    events.append(r)
 
 
 def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book_rule,
@@ -259,7 +261,7 @@ def find_order_position(order_id, order_book):
     return None, None, None
 
 
-def ob_aggr_add_level(side, level, price, qty, num_orders, impl_qty, impl_num_orders, order_book):
+def ob_aggr_add_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
     result_body = {}
     max_levels = order_book["aggr_max_levels"]
     side_key = side+"_aggr"
@@ -268,7 +270,7 @@ def ob_aggr_add_level(side, level, price, qty, num_orders, impl_qty, impl_num_or
         result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
         return result_body
 
-    new_level = {"price": price, "qty": qty, "num_orders": num_orders, "impl_qty": impl_qty,
+    new_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders, "impl_qty": impl_qty,
                  "impl_num_orders": impl_num_orders}
     order_book[side_key].insert(new_index, new_level)
     if len(order_book[side_key]) == max_levels+1:
