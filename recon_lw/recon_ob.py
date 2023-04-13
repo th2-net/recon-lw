@@ -322,4 +322,4 @@ def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_
     order_book["bid_real_n_orders"] = bid_real_n_orders
     order_book["bid_impl_n_orders"] = bid_impl_n_orders
 
-    
+    return {}
