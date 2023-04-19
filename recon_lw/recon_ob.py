@@ -185,24 +185,25 @@ def flush_ob_stream(ts,rule_settings,event_sequence, save_events_func):
     flush_sequence_clear_cache(n_processed,rule_settings["sequence_cache"])
 
 
+def init_aggr_seq(order_book):
+    order_book["aggr_seq"] = {"top_v": 0, "top_delta": 0, "limit_v": 0, "limit_delta": 0}
+
+
 def ob_add_order(order_id, price, size, side, order_book):
-    result_body = {}
     if find_order_position(order_id, order_book)[0] is not None:
-        result_body["error"] = order_id + " already exists"
-        return result_body
+        return {"error": order_id + " already exists"}
     if price not in order_book[side]:
         order_book[side][price] = {order_id: size}
-        return result_body
+        return {}
+
     order_book[side][price][order_id] = size
     return {}
 
 
 def ob_update_order(order_id, price, size, order_book):
-    result_body = {}
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
-        result_body["error"] = order_id + " not found"
-        return result_body
+        return {"error": order_id + " not found"}
 
     if price == old_price:
         order_book[old_side][old_price][order_id] = size
@@ -218,11 +219,9 @@ def ob_update_order(order_id, price, size, order_book):
 
 
 def ob_delete_order(order_id, order_book):
-    result_body = {}
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
-        result_body["error"] = order_id + " not found"
-        return result_body
+        return {"error": order_id + " not found"}
 
     order_book[old_side][old_price].pop(order_id)
     if len(order_book[old_side][old_price]) == 0:
@@ -231,14 +230,11 @@ def ob_delete_order(order_id, order_book):
 
 
 def ob_trade_order(order_id, traded_size ,order_book):
-    result_body = {}
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
-        result_body["error"] = order_id + " not found"
-        return result_body
+        return {"error": order_id + " not found"}
     if traded_size > old_size:
-        result_body["error"] = "traded size > resting size"
-        return result_body
+        return {"error": "traded size > resting size"}
     elif traded_size == old_size:
         order_book[old_side][old_price].pop(order_id)
         if len(order_book[old_side][old_price]) == 0:
@@ -248,17 +244,31 @@ def ob_trade_order(order_id, traded_size ,order_book):
     return {}
 
 
+def ob_clean_book(order_book):
+    for side_key in ["ask", "bid"]:
+        if side_key in order_book:
+            order_book[side_key].clear()
+
+
 def ob_change_status(new_status, order_book):
     order_book["status"] = new_status
     return {}
 
 
 def find_order_position(order_id, order_book):
-    for side in ["ask","bid"]:
+    for side in ["ask", "bid"]:
         for pr,orders in order_book[side].items():
             if order_id in orders:
                 return side, pr, orders[order_id]
     return None, None, None
+
+
+def get_price_level(side, p, order_book):
+    if p not in order_book[side]:
+        return -1
+    levels = list(order_book[side].keys())
+    levels.sort()
+    return levels.index(p)+1 if side == "ask" else len(levels)-levels.index(p)
 
 
 def ob_aggr_add_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
@@ -308,6 +318,12 @@ def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty
     return {}
 
 
+def ob_aggr_clean_book(order_book):
+    for side_key in ["ask_aggr", "bid_aggr"]:
+        if side_key in order_book:
+            order_book[side_key].clear()
+
+
 def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_impl_n_orders,
                   bid_price, bid_real_qty, bid_impl_qty, bid_real_n_orders, bid_impl_n_orders,
                   order_book):
@@ -323,3 +339,4 @@ def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_
     order_book["bid_impl_n_orders"] = bid_impl_n_orders
 
     return {}
+
