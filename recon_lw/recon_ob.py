@@ -248,6 +248,7 @@ def ob_clean_book(order_book):
     for side_key in ["ask", "bid"]:
         if side_key in order_book:
             order_book[side_key].clear()
+    return {}
 
 
 def ob_change_status(new_status, order_book):
@@ -322,6 +323,7 @@ def ob_aggr_clean_book(order_book):
     for side_key in ["ask_aggr", "bid_aggr"]:
         if side_key in order_book:
             order_book[side_key].clear()
+    return {}
 
 
 def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_impl_n_orders,
