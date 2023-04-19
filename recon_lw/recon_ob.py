@@ -189,69 +189,127 @@ def init_aggr_seq(order_book):
     order_book["aggr_seq"] = {"top_v": 0, "top_delta": 0, "limit_v": 0, "limit_delta": 0}
 
 
+def reflect_price_update_in_version(side, price, order_book):
+    level = get_price_level(side, price, order_book)
+    max_levels = order_book["aggr_max_levels"]
+    if level <= max_levels:
+        order_book["aggr_seq"]["limit_v"] += 1
+        order_book["aggr_seq"]["limit_delta"] = 1
+    if level == 1:
+        order_book["aggr_seq"]["top_v"] += 1
+        order_book["aggr_seq"]["top_delta"] = 1
+
+
 def ob_add_order(order_id, price, size, side, order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+
     if find_order_position(order_id, order_book)[0] is not None:
         return {"error": order_id + " already exists"}
     if price not in order_book[side]:
         order_book[side][price] = {order_id: size}
-        return {}
+    else:
+        order_book[side][price][order_id] = size
 
-    order_book[side][price][order_id] = size
+    reflect_price_update_in_version(side, price, order_book)
     return {}
 
 
 def ob_update_order(order_id, price, size, order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
         return {"error": order_id + " not found"}
 
     if price == old_price:
         order_book[old_side][old_price][order_id] = size
+        reflect_price_update_in_version(old_side, old_price, order_book)
     else:
+        # should no get here but will monitor
+        reflect_price_update_in_version(old_side, old_price, order_book)
         order_book[old_side][old_price].pop(order_id)
         if len(order_book[old_side][old_price]) == 0:
             order_book[old_side].pop(old_price)
         if price not in order_book[old_side]:
             order_book[old_side][price] = {}
         order_book[old_side][price][order_id] = size
+        reflect_price_update_in_version(old_side, price, order_book)
 
     return {}
 
 
 def ob_delete_order(order_id, order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
         return {"error": order_id + " not found"}
 
+    reflect_price_update_in_version(old_side, old_price, order_book)
     order_book[old_side][old_price].pop(order_id)
     if len(order_book[old_side][old_price]) == 0:
         order_book[old_side].pop(old_price)
+        max_levels = order_book["aggr_max_levels"]
+        if len(order_book[old_side]) >= max_levels and order_book["aggr_seq"]["limit_delta"] == 1:
+            #back from horizon update
+            order_book["aggr_seq"]["limit_delta"] = 2
+            order_book["aggr_seq"]["limit_v"] += 1
+
     return {}
 
 
 def ob_trade_order(order_id, traded_size ,order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
         return {"error": order_id + " not found"}
     if traded_size > old_size:
         return {"error": "traded size > resting size"}
     elif traded_size == old_size:
+        reflect_price_update_in_version(old_side, old_price, order_book)
         order_book[old_side][old_price].pop(order_id)
         if len(order_book[old_side][old_price]) == 0:
             order_book[old_side].pop(old_price)
+            if len(order_book[old_side]) >= max_levels and order_book["aggr_seq"]["limit_delta"] == 1:
+                # back from horizon update
+                order_book["aggr_seq"]["limit_delta"] = 2
+                order_book["aggr_seq"]["limit_v"] += 1
     else:
+        reflect_price_update_in_version(old_side, old_price, order_book)
         order_book[old_side][old_price][order_id] -= traded_size
     return {}
 
 
 def ob_clean_book(order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
     for side_key in ["ask", "bid"]:
         if side_key in order_book:
             order_book[side_key].clear()
+    order_book["aggr_seq"]["limit_delta"] = 1
+    order_book["aggr_seq"]["limit_v"] += 1
+    order_book["aggr_seq"]["top_delta"] = 1
+    order_book["aggr_seq"]["top_v"] += 1
+    return {}
 
 
 def ob_change_status(new_status, order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
     order_book["status"] = new_status
+    order_book["aggr_seq"]["limit_delta"] = 1
+    order_book["aggr_seq"]["limit_v"] += 1
+    order_book["aggr_seq"]["top_delta"] = 1
+    order_book["aggr_seq"]["top_v"] += 1
     return {}
 
 
@@ -263,6 +321,7 @@ def find_order_position(order_id, order_book):
     return None, None, None
 
 
+# levels start with 1 (1,2,......
 def get_price_level(side, p, order_book):
     if p not in order_book[side]:
         return -1
@@ -322,6 +381,7 @@ def ob_aggr_clean_book(order_book):
     for side_key in ["ask_aggr", "bid_aggr"]:
         if side_key in order_book:
             order_book[side_key].clear()
+    return {}
 
 
 def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_impl_n_orders,
