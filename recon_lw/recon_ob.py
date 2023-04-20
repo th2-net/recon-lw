@@ -65,7 +65,7 @@ def flush_sequence_clear_cache(processed_len, sequence_cache):
 
 
 def process_market_data_update(mess, events,  books_cache, get_book_id_func ,update_book_rule,
-                               check_book_rule, event_sequence, parent_event, initial_book_params):
+                               check_book_rule, event_sequence, parent_event, initial_book_params, log_books_filter):
     book_id, result = get_book_id_func(mess)
     if result is not None:
         book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor", event_sequence,
@@ -88,7 +88,7 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
             initial_book = copy.deepcopy(book)
             initial_parameters = copy.copy(parameters)
             parameters["order_book"] = book
-            result = operation(**parameters)
+            result, log_entries = operation(**parameters)
             if len(result) > 0:
                 result["operation"] = operation.__name__
                 result["operation_params"] = initial_parameters
@@ -101,6 +101,22 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
                                                      parentId=parent_event["eventId"])
                 update_event["attachedMessageIds"] = [mess["messageId"]]
                 events.append(update_event)
+            if log_entries is not None:
+                for log_book in log_entries:
+                    log_book["sessionId"] = mess["sessionId"]
+                    log_book["book_id"] = book_id
+                    log_book["operation"] = operation.__name__
+                    log_book["operation_params"] = initial_parameters
+                    if log_books_filter is not None and log_books_filter(log_book):
+                        log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
+                                                          "OrderBook",
+                                                          event_sequence,
+                                                          ok=True,
+                                                          body=log_book,
+                                                          parentId=parent_event["eventId"])
+                        log_event["attachedMessageIds"] = [mess["messageId"]]
+                        events.append(log_event)
+
             results = check_book_rule(book, event_sequence)
             if results is not None:
                 for r in results:
@@ -115,7 +131,8 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
 
 
 def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book_rule,
-                     check_book_rule, event_sequence, send_events_func, parent_event, initial_book_params):
+                     check_book_rule, event_sequence, send_events_func, parent_event, initial_book_params,
+                     log_books_filter):
     events = []
     n_processed = 0
     for m in sequenced_batch:
@@ -130,7 +147,8 @@ def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book
         chunk = message_utils.expand_message(mess)
         for m_upd in chunk:
             process_market_data_update(m_upd, events, books_cache, get_book_id_func, update_book_rule,
-                                       check_book_rule, event_sequence, parent_event, initial_book_params)
+                                       check_book_rule, event_sequence, parent_event, initial_book_params,
+                                       log_books_filter)
         n_processed += 1
 
     send_events_func(events)
@@ -166,7 +184,8 @@ def flush_ob_stream(ts,rule_settings,event_sequence, save_events_func):
                                    event_sequence,
                                    save_events_func,
                                    rule_settings["rule_root_event"],
-                                   rule_settings["initial_book_params"])
+                                   rule_settings["initial_book_params"],
+                                   rule_settings["log_books_filter"] if "log_books_filter" in rule_settings else None)
     ## Process duplicated
     duplicates = rule_settings["sequence_cache"]["duplicates"]
     n_dupl = len(duplicates)
@@ -206,14 +225,14 @@ def ob_add_order(order_id, price, size, side, order_book):
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
 
     if find_order_position(order_id, order_book)[0] is not None:
-        return {"error": order_id + " already exists"}
+        return {"error": order_id + " already exists"}, []
     if price not in order_book[side]:
         order_book[side][price] = {order_id: size}
     else:
         order_book[side][price][order_id] = size
 
     reflect_price_update_in_version(side, price, order_book)
-    return {}
+    return {}, [copy.deepcopy(order_book)]
 
 
 def ob_update_order(order_id, price, size, order_book):
@@ -223,23 +242,27 @@ def ob_update_order(order_id, price, size, order_book):
 
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
-        return {"error": order_id + " not found"}
+        return {"error": order_id + " not found"}, []
 
+    log = []
     if price == old_price:
         order_book[old_side][old_price][order_id] = size
         reflect_price_update_in_version(old_side, old_price, order_book)
+        log.append(copy.deepcopy(order_book))
     else:
         # should no get here but will monitor
         reflect_price_update_in_version(old_side, old_price, order_book)
         order_book[old_side][old_price].pop(order_id)
         if len(order_book[old_side][old_price]) == 0:
             order_book[old_side].pop(old_price)
+        log.append(copy.deepcopy(order_book))
         if price not in order_book[old_side]:
             order_book[old_side][price] = {}
         order_book[old_side][price][order_id] = size
         reflect_price_update_in_version(old_side, price, order_book)
+        log.append(copy.deepcopy(order_book))
 
-    return {}
+    return {}, log
 
 
 def ob_delete_order(order_id, order_book):
@@ -249,19 +272,24 @@ def ob_delete_order(order_id, order_book):
 
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
-        return {"error": order_id + " not found"}
+        return {"error": order_id + " not found"}, []
 
+    log = []
     reflect_price_update_in_version(old_side, old_price, order_book)
     order_book[old_side][old_price].pop(order_id)
     if len(order_book[old_side][old_price]) == 0:
         order_book[old_side].pop(old_price)
+        log.append(copy.deepcopy(order_book))
         max_levels = order_book["aggr_max_levels"]
         if len(order_book[old_side]) >= max_levels and order_book["aggr_seq"]["limit_delta"] == 1:
             #back from horizon update
             order_book["aggr_seq"]["limit_delta"] = 2
             order_book["aggr_seq"]["limit_v"] += 1
+            log.append(copy.deepcopy(order_book))
+    else:
+        log.append(copy.deepcopy(order_book))
 
-    return {}
+    return {}, log
 
 
 def ob_trade_order(order_id, traded_size ,order_book):
@@ -269,23 +297,30 @@ def ob_trade_order(order_id, traded_size ,order_book):
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
     old_side, old_price, old_size = find_order_position(order_id, order_book)
+    log = []
     if old_side is None:
-        return {"error": order_id + " not found"}
+        return {"error": order_id + " not found"}, []
     if traded_size > old_size:
-        return {"error": "traded size > resting size"}
+        return {"error": "traded size > resting size"}, []
     elif traded_size == old_size:
         reflect_price_update_in_version(old_side, old_price, order_book)
         order_book[old_side][old_price].pop(order_id)
         if len(order_book[old_side][old_price]) == 0:
             order_book[old_side].pop(old_price)
+            log.append(copy.deepcopy(order_book))
+            max_levels = order_book["aggr_max_levels"]
             if len(order_book[old_side]) >= max_levels and order_book["aggr_seq"]["limit_delta"] == 1:
                 # back from horizon update
                 order_book["aggr_seq"]["limit_delta"] = 2
                 order_book["aggr_seq"]["limit_v"] += 1
+                log.append(copy.deepcopy(order_book))
+        else:
+            log.append(copy.deepcopy(order_book))
     else:
         reflect_price_update_in_version(old_side, old_price, order_book)
         order_book[old_side][old_price][order_id] -= traded_size
-    return {}
+        log.append(copy.deepcopy(order_book))
+    return {}, log
 
 
 def ob_clean_book(order_book):
@@ -299,7 +334,7 @@ def ob_clean_book(order_book):
     order_book["aggr_seq"]["limit_v"] += 1
     order_book["aggr_seq"]["top_delta"] = 1
     order_book["aggr_seq"]["top_v"] += 1
-    return {}
+    return {}, [copy.deepcopy(order_book)]
 
 
 def ob_change_status(new_status, order_book):
@@ -310,7 +345,7 @@ def ob_change_status(new_status, order_book):
     order_book["aggr_seq"]["limit_v"] += 1
     order_book["aggr_seq"]["top_delta"] = 1
     order_book["aggr_seq"]["top_v"] += 1
-    return {}
+    return {}, [copy.deepcopy(order_book)]
 
 
 def find_order_position(order_id, order_book):
@@ -331,62 +366,84 @@ def get_price_level(side, p, order_book):
 
 
 def ob_aggr_add_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
     result_body = {}
     max_levels = order_book["aggr_max_levels"]
     side_key = side+"_aggr"
     new_index = level - 1
     if not 0 <= new_index <= len(order_book[side_key]):
         result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
-        return result_body
+        return result_body,[]
 
     new_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders, "impl_qty": impl_qty,
                  "impl_num_orders": impl_num_orders}
     order_book[side_key].insert(new_index, new_level)
     if len(order_book[side_key]) == max_levels+1:
         order_book[side_key].pop()
+    order_book["aggr_seq"]["limit_delta"] = 1
+    order_book["aggr_seq"]["limit_v"] += 1
 
-    return {}
+    return {}, [copy.deepcopy(order_book)]
 
 
 def ob_aggr_delete_level(side, level, order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
     result_body = {}
     side_key = side+"_aggr"
     del_index = level - 1
     if not 0 <= del_index < len(order_book[side_key]):
         result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
-        return result_body
+        return result_body, []
 
     order_book[side_key].pop(del_index)
 
-    return {}
+    order_book["aggr_seq"]["limit_delta"] = 1
+    order_book["aggr_seq"]["limit_v"] += 1
+    return {}, [copy.deepcopy(order_book)]
 
 
 def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
     result_body = {}
     max_levels = order_book["aggr_max_levels"]
     side_key = side+"_aggr"
     update_index = level - 1
     if not 0 <= update_index < len(order_book[side_key]):
         result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
-        return result_body
+        return result_body, []
 
     upd_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders, 
                  "impl_qty" : impl_qty, "impl_num_orders": impl_num_orders}
     order_book[side_key][update_index].update(upd_level)
+    order_book["aggr_seq"]["limit_delta"] = 1
+    order_book["aggr_seq"]["limit_v"] += 1
 
-    return {}
+    return {}, [copy.deepcopy(order_book)]
 
 
 def ob_aggr_clean_book(order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
     for side_key in ["ask_aggr", "bid_aggr"]:
         if side_key in order_book:
             order_book[side_key].clear()
-    return {}
+    order_book["aggr_seq"]["limit_delta"] = 1
+    order_book["aggr_seq"]["limit_v"] += 1
+    return {}, [copy.deepcopy(order_book)]
 
 
 def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_impl_n_orders,
                   bid_price, bid_real_qty, bid_impl_qty, bid_real_n_orders, bid_impl_n_orders,
                   order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
     order_book["ask_price"] = ask_price
     order_book["ask_real_qty"] = ask_real_qty
     order_book["ask_impl_qty"] = ask_impl_qty
@@ -398,5 +455,8 @@ def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_
     order_book["bid_real_n_orders"] = bid_real_n_orders
     order_book["bid_impl_n_orders"] = bid_impl_n_orders
 
-    return {}
+    order_book["aggr_seq"]["top_delta"] = 1
+    order_book["aggr_seq"]["top_v"] += 1
+
+    return {}, [copy.deepcopy(order_book)]
 
