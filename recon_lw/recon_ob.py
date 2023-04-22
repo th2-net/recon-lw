@@ -103,11 +103,12 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
                 events.append(update_event)
             if log_entries is not None:
                 for log_book in log_entries:
+                    log_book["timestamp"] = mess["timestamp"]
                     log_book["sessionId"] = mess["sessionId"]
                     log_book["book_id"] = book_id
                     log_book["operation"] = operation.__name__
                     log_book["operation_params"] = initial_parameters
-                    if log_books_filter is not None and log_books_filter(log_book):
+                    if log_books_filter is None or log_books_filter(log_book):
                         log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
                                                           "OrderBook",
                                                           event_sequence,
