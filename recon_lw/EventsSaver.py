@@ -9,13 +9,17 @@ class EventsSaver:
         self._buffer = []
         self._path = path
 
+    def flush(self):
+        if self._buffer:
+            events = Data(self._buffer)
+            events_file = self._path / (self._buffer[0]["eventId"] + ".pickle")
+            events.build_cache(events_file)
+            self._buffer.clear()
+
     def save_events(self, batch):
         self._buffer.extend(batch)
         if len(self._buffer) > 50000:
-            events = Data(self._buffer)
-            events_file = self._path + "/" + self._buffer[0]["eventId"] + ".pickle"
-            events.build_cache(events_file)
-            self._buffer.clear()
+            self.flush()
 
     def create_event(self, name, type, ok=True, body=None, parentId=None):
         ts = datetime.now()

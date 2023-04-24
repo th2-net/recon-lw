@@ -2,6 +2,7 @@ from recon_lw import recon_lw
 from recon_lw.EventsSaver import EventsSaver
 from recon_lw.TimeCacheMatcher import TimeCacheMatcher
 from datetime import datetime
+from itertools import islice
 
 
 def synopsys(price_condition, num_orders_condition, size_condition):
@@ -82,27 +83,27 @@ def compare_full_vs_top(full_book, top_book):
 
 
 def ob_compare_get_timestamp_key1_key2_aggr(full_session, comp_session, o):
-    if o["sessionId"] == full_session:
-        return o["timestamp"], "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["limit_v"]), None
+    if o["body"]["sessionId"] == full_session:
+        return o["body"]["timestamp"], "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["limit_v"]), None
 
-    if o["sessionId"] == comp_session:
-        return o["timestamp"], None ,"{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["limit_v"])
+    if o["body"]["sessionId"] == comp_session:
+        return o["body"]["timestamp"], None ,"{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["limit_v"])
 
     return None, None, None
 
 
 def ob_compare_get_timestamp_key1_key2_top(full_session, comp_session, o):
-    if o["sessionId"] == full_session:
+    if o["body"]["sessionId"] == full_session:
         return o["body"]["timestamp"], "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["top_v"]), None
 
-    if o["sessionId"] == comp_session:
+    if o["body"]["sessionId"] == comp_session:
         return o["body"]["timestamp"], None, "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["top_v"])
 
     return None, None, None
 
 
 def ob_compare_interpret_match_aggr(match, create_event, save_events):
-    if match[0]["body"] is not None and match[1]["body"] is not None:
+    if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_aggr(match[0]["body"],match[1]["body"])
         if len(comp_res) > 0:
             error_event = create_event("StreamMismatch",
@@ -114,7 +115,7 @@ def ob_compare_interpret_match_aggr(match, create_event, save_events):
                                         "version": match[0]["body"]["aggr_seq"]["limit_v"],
                                         "errors": comp_res})
             save_events([error_event])
-    elif match[0]["body"] is not None:
+    elif match[0] is not None:
         error_event = create_event("StreamMismatchNoAggr",
                                    "StreamMismatchNoAggr",
                                    False,
@@ -122,7 +123,7 @@ def ob_compare_interpret_match_aggr(match, create_event, save_events):
                                     "book_id": match[0]["body"]["book_id"],
                                     "version": match[0]["body"]["aggr_seq"]["limit_v"]})
         save_events([error_event])
-    elif match[1]["body"] is not None:
+    elif match[1] is not None:
         error_event = create_event("StreamMismatchNoFull",
                                    "StreamMismatchNoFull",
                                    False,
@@ -133,7 +134,7 @@ def ob_compare_interpret_match_aggr(match, create_event, save_events):
 
 
 def ob_compare_interpret_match_top(match, create_event, save_events):
-    if match[0]["body"] is not None and match[1]["body"] is not None:
+    if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_top(match[0]["body"],match[1]["body"])
         if len(comp_res) > 0:
             error_event = create_event("StreamMismatch",
@@ -145,7 +146,7 @@ def ob_compare_interpret_match_top(match, create_event, save_events):
                                         "version": match[0]["body"]["aggr_seq"]["limit_v"],
                                         "errors": comp_res})
             save_events([error_event])
-    elif match[0]["body"] is not None:
+    elif match[0] is not None:
         error_event = create_event("StreamMismatchNoTop",
                                    "StreamMismatchNoTop",
                                    False,
@@ -153,7 +154,7 @@ def ob_compare_interpret_match_top(match, create_event, save_events):
                                     "book_id": match[0]["body"]["book_id"],
                                     "version": match[0]["body"]["aggr_seq"]["limit_v"]})
         save_events([error_event])
-    elif match[1]["body"] is not None:
+    elif match[1] is not None:
         error_event = create_event("StreamMismatchNoFull",
                                    "StreamMismatchNoFull",
                                    False,
@@ -163,13 +164,22 @@ def ob_compare_interpret_match_top(match, create_event, save_events):
         save_events([error_event])
 
 
+def split_every(n, data):
+    iterable = iter(data)
+    while 1:
+        piece = list(islice(iterable, n))
+        if not piece:
+            break
+        yield piece
+
+
 #{"horizon_dely": 180, full_session: "aaa", aggr_session: "bbb", top_session: "ccc"}
 def ob_compare_streams(source_events, results_path, rules_dict):
     events_saver = EventsSaver(results_path)
     processors = []
     root_event = events_saver.create_event("recon_lw_ob_streams " + datetime.now().isoformat(), "Microservice")
     events_saver.save_events([root_event])
-    for rule_name, rule_params in rules_dict.items:
+    for rule_name, rule_params in rules_dict.items():
         rule_root_event = events_saver.create_event(rule_name,"OBStreamsCompareRule", parentId=root_event["parentId"])
         events_saver.save_events([rule_root_event])
         full_session = rule_params["full_session"]
@@ -201,18 +211,16 @@ def ob_compare_streams(source_events, results_path, rules_dict):
             processors.append(processor_top)
 
     order_books_events = source_events.filter(lambda e: e["eventType"] == "OrderBook")
-    events_buffer = [None] * 100
-    buffer_len = 100
-    buffer_index = 0
-    for e in order_books_events:
-        events_buffer[buffer_index] = e
-        buffer_index += 1
-        if buffer_index == buffer_len:
-            for p in processors:
-                p.process_objects_batch(events_buffer)
+
+    buffers = split_every(100, order_books_events)
+    for buffer in buffers:
+        for p in processors:
+            p.process_object_batch(buffer)
+
     for p in processors:
-        p.process_objects_batch(events_buffer[:buffer_index])
         p.flush_all()
+
+    events_saver.flush()
 
 
 def _example_of_usage_run_recon():
