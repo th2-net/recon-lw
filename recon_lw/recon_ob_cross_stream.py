@@ -180,7 +180,7 @@ def ob_compare_streams(source_events, results_path, rules_dict):
     root_event = events_saver.create_event("recon_lw_ob_streams " + datetime.now().isoformat(), "Microservice")
     events_saver.save_events([root_event])
     for rule_name, rule_params in rules_dict.items():
-        rule_root_event = events_saver.create_event(rule_name,"OBStreamsCompareRule", parentId=root_event["parentId"])
+        rule_root_event = events_saver.create_event(rule_name,"OBStreamsCompareRule", parentId=root_event["eventId"])
         events_saver.save_events([rule_root_event])
         full_session = rule_params["full_session"]
         if "aggr_session" in rule_params:
@@ -192,7 +192,7 @@ def ob_compare_streams(source_events, results_path, rules_dict):
                                                                                                         ev_type,
                                                                                                         ok,
                                                                                                         body,
-                                                                                                        parentId=rule_root_event["parentId"]),
+                                                                                                        parentId=rule_root_event["eventId"]),
                                               lambda ev_batch: events_saver.save_events(ev_batch)
                                               )
             processors.append(processor_aggr)
@@ -205,7 +205,7 @@ def ob_compare_streams(source_events, results_path, rules_dict):
                                                                                                        ev_type,
                                                                                                        ok,
                                                                                                        body,
-                                                                                                       parentId=rule_root_event["parentId"]),
+                                                                                                       parentId=rule_root_event["eventId"]),
                                              lambda ev_batch: events_saver.save_events(ev_batch)
                                              )
             processors.append(processor_top)
