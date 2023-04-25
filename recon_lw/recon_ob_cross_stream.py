@@ -215,7 +215,7 @@ def ob_compare_streams(source_events, results_path, rules_dict):
     buffers = split_every(100, order_books_events)
     for buffer in buffers:
         for p in processors:
-            p.process_object_batch(buffer)
+            p.process_objects_batch(buffer)
 
     for p in processors:
         p.flush_all()
