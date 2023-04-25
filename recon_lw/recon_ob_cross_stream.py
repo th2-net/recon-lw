@@ -121,7 +121,7 @@ def ob_compare_interpret_match_aggr(match, create_event, save_events):
                                    False,
                                    {"full_book_event": match[0]["eventId"],
                                     "book_id": match[0]["body"]["book_id"],
-                                    "version": match[0]["body"]["aggr_seq"]["limit_v"]}, "sessionId": match[0]["body"]["sessionId"])
+                                    "version": match[0]["body"]["aggr_seq"]["limit_v"], "sessionId": match[0]["body"]["sessionId"]})
         save_events([error_event])
     elif match[1] is not None:
         error_event = create_event("StreamMismatchNoFull",
