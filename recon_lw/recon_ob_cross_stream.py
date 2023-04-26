@@ -201,7 +201,7 @@ def ob_compare_streams(source_events, results_path, rules_dict):
             top_session = rule_params["top_session"]
             processor_top = TimeCacheMatcher(rule_params["horizon_delay"],
                                              ob_compare_get_timestamp_key1_key2_top,
-                                             ob_compare_interpret_match_aggr,
+                                             ob_compare_interpret_match_top,
                                              {"full_session": full_session, "comp_session": top_session},
                                              lambda name, ev_type, ok, body: events_saver.create_event(name,
                                                                                                        ev_type,
