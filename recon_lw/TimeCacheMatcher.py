@@ -17,6 +17,14 @@ class TimeCacheMatcher:
         stream_time = None
         for o in batch:
             ts, key1, key2 = self._get_timestamp_key1_key2(o, self._custom_settings)
+            log_event =  self._create_event ("MatcherLog" + str(self._custom_settings),
+                                             "MatcherLog",
+                                             False,
+                                             {"ts": ts,
+                                              "key1": key1,
+                                              "key2": key2,
+                                              "sourceEventId": o["eventId"]})
+            self._send_events([log_event])
             if ts is None:
                 continue
             stream_time = ts
