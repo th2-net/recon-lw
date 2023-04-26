@@ -3,7 +3,7 @@ from recon_lw import recon_lw
 
 
 class TimeCacheMatcher:
-    def __init__(self,horizon_delay_seconds, get_timestamp_key1_key2, interpret_func, create_event, send_events):
+    def __init__(self,horizon_delay_seconds, get_timestamp_key1_key2, interpret_func, custom_settings ,create_event, send_events):
         self._match_index = {}
         self._time_index = SortedKeyList(key=lambda t: recon_lw.time_stamp_key(t[0]))
         self._get_timestamp_key1_key2 = get_timestamp_key1_key2
@@ -11,11 +11,12 @@ class TimeCacheMatcher:
         self._create_event = create_event
         self._send_events = send_events
         self._horizon_delay_seconds = horizon_delay_seconds
+        self._custom_settings = custom_settings
 
     def process_objects_batch(self, batch):
         stream_time = None
         for o in batch:
-            ts, key1, key2 = self._get_timestamp_key1_key2(o)
+            ts, key1, key2 = self._get_timestamp_key1_key2(o, self._custom_settings)
             if ts is None:
                 continue
             stream_time = ts
@@ -40,11 +41,11 @@ class TimeCacheMatcher:
                 for n in range(horizon_edge):
                     nxt = self._time_index.pop(0)
                     match = self._match_index.pop(nxt[1])
-                    self._interpret_func(match, self._create_event, self._send_events)
+                    self._interpret_func(match, self._custom_settings, self._create_event, self._send_events)
 
     def flush_all(self):
         self._time_index.clear()
         for match in self._match_index.values():
-            self._interpret_func(match, self._create_event, self._send_events)
+            self._interpret_func(match, self._custom_settings, self._create_event, self._send_events)
         self._match_index.clear()
 

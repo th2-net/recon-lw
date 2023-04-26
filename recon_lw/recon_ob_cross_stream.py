@@ -82,27 +82,27 @@ def compare_full_vs_top(full_book, top_book):
     return problems
 
 
-def ob_compare_get_timestamp_key1_key2_aggr(full_session, comp_session, o):
-    if o["body"]["sessionId"] == full_session:
+def ob_compare_get_timestamp_key1_key2_aggr(o,custom_settings):
+    if o["body"]["sessionId"] == custom_settings["full_session"]:
         return o["body"]["timestamp"], "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["limit_v"]), None
 
-    if o["body"]["sessionId"] == comp_session:
+    if o["body"]["sessionId"] == custom_settings["comp_session"]:
         return o["body"]["timestamp"], None ,"{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["limit_v"])
 
     return None, None, None
 
 
-def ob_compare_get_timestamp_key1_key2_top(full_session, comp_session, o):
-    if o["body"]["sessionId"] == full_session:
+def ob_compare_get_timestamp_key1_key2_top(o, custom_settings):
+    if o["body"]["sessionId"] == custom_settings["full_session"]:
         return o["body"]["timestamp"], "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["top_v"]), None
 
-    if o["body"]["sessionId"] == comp_session:
+    if o["body"]["sessionId"] == custom_settings["comp_session"]:
         return o["body"]["timestamp"], None, "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["top_v"])
 
     return None, None, None
 
 
-def ob_compare_interpret_match_aggr(match, create_event, save_events):
+def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_events):
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_aggr(match[0]["body"],match[1]["body"])
         if len(comp_res) > 0:
@@ -133,7 +133,7 @@ def ob_compare_interpret_match_aggr(match, create_event, save_events):
         save_events([error_event])
 
 
-def ob_compare_interpret_match_top(match, create_event, save_events):
+def ob_compare_interpret_match_top(match, custom_settings, create_event, save_events):
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_top(match[0]["body"],match[1]["body"])
         if len(comp_res) > 0:
@@ -186,8 +186,9 @@ def ob_compare_streams(source_events, results_path, rules_dict):
         if "aggr_session" in rule_params:
             aggr_session = rule_params["aggr_session"]
             processor_aggr = TimeCacheMatcher(rule_params["horizon_delay"],
-                                              lambda o: ob_compare_get_timestamp_key1_key2_aggr(full_session,aggr_session,o),
+                                              ob_compare_get_timestamp_key1_key2_aggr,
                                               ob_compare_interpret_match_aggr,
+                                              {"full_session": full_session, "comp_session": aggr_session},
                                               lambda name, ev_type, ok, body: events_saver.create_event(name,
                                                                                                         ev_type,
                                                                                                         ok,
@@ -199,8 +200,9 @@ def ob_compare_streams(source_events, results_path, rules_dict):
         if "top_session" in rule_params:
             top_session = rule_params["top_session"]
             processor_top = TimeCacheMatcher(rule_params["horizon_delay"],
-                                             lambda o: ob_compare_get_timestamp_key1_key2_top(full_session,top_session,o),
+                                             ob_compare_get_timestamp_key1_key2_top,
                                              ob_compare_interpret_match_aggr,
+                                             {"full_session": full_session, "comp_session": top_session},
                                              lambda name, ev_type, ok, body: events_saver.create_event(name,
                                                                                                        ev_type,
                                                                                                        ok,
