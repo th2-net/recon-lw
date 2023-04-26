@@ -116,12 +116,15 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                         "errors": comp_res})
             save_events([error_event])
     elif match[0] is not None:
+        tech_info = ob_compare_get_timestamp_key1_key2_aggr(match[0],custom_settings)
         error_event = create_event("StreamMismatchNoAggr",
                                    "StreamMismatchNoAggr",
                                    False,
                                    {"full_book_event": match[0]["eventId"],
                                     "book_id": match[0]["body"]["book_id"],
-                                    "version": match[0]["body"]["aggr_seq"]["limit_v"], "sessionId": match[0]["body"]["sessionId"]})
+                                    "version": match[0]["body"]["aggr_seq"]["limit_v"],
+                                    "sessionId": match[0]["body"]["sessionId"],
+                                    "tech_info": tech_info})
         save_events([error_event])
     elif match[1] is not None:
         error_event = create_event("StreamMismatchNoFull",
