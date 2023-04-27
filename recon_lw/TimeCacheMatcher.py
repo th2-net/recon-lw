@@ -23,7 +23,7 @@ class TimeCacheMatcher:
                                              {"ts": ts,
                                               "key1": key1,
                                               "key2": key2,
-                                              "sourceEventId": o["eventId"]})
+                                              "sourceEvent": o})
             self._send_events([log_event])
             if ts is None:
                 continue
