@@ -440,6 +440,27 @@ def ob_aggr_clean_book(order_book):
     return {}, [copy.deepcopy(order_book)]
 
 
+def ob_top_clean_book(order_book):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+
+    order_book["ask_price"] = 0
+    order_book["ask_real_qty"] = 0
+    order_book["ask_impl_qty"] = 0
+    order_book["ask_real_n_orders"] = 0
+    order_book["ask_impl_n_orders"] = 0
+    order_book["bid_price"] = 0
+    order_book["bid_real_qty"] = 0
+    order_book["bid_impl_qty"] = 0
+    order_book["bid_real_n_orders"] = 0
+    order_book["bid_impl_n_orders"] = 0
+
+    order_book["aggr_seq"]["top_delta"] = 1
+    order_book["aggr_seq"]["top_v"] += 1
+
+    return {}, [copy.deepcopy(order_book)]
+
+
 def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_impl_n_orders,
                   bid_price, bid_real_qty, bid_impl_qty, bid_real_n_orders, bid_impl_n_orders,
                   order_book):
