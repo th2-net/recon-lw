@@ -49,7 +49,7 @@ def compare_full_vs_aggr(full_book, aggr_book):
 def compare_full_vs_top(full_book, top_book):
     problems = []
     if len(full_book["ask"]) > 0:
-        if top_book["ask_price"] is None:
+        if top_book["ask_real_qty"] == 0 and top_book["ask_impl_qty"] == 0:
             problems.append({"synopsys": "top_miss_level", "side": "ask"})
         else:
             top_p = min(full_book["ask"].keys())
@@ -61,11 +61,11 @@ def compare_full_vs_top(full_book, top_book):
                 problems.append({"synopsys": synopsys(price_condition, num_orders_condition, size_condition),
                                  "side": "ask"})
     else:
-        if top_book["ask_price"] is not None:
+        if top_book["ask_real_qty"] != 0 or top_book["ask_impl_qty"] != 0:
             problems.append({"synopsys": "full_miss_level", "side": "ask"})
 
     if len(full_book["bid"]) > 0:
-        if top_book["bid_price"] is None:
+        if top_book["bid_real_qty"] == 0 and top_book["bid_impl_qty"] == 0:
             problems.append({"synopsys": "top_miss_level", "side": "bid"})
         else:
             top_p = max(full_book["bid"].keys())
@@ -77,7 +77,7 @@ def compare_full_vs_top(full_book, top_book):
                 problems.append({"synopsys": synopsys(price_condition, num_orders_condition, size_condition),
                                  "side": "bid"})
     else:
-        if top_book["bid_price"] is not None:
+        if top_book["bid_real_qty"] != 0 or top_book["bid_impl_qty"] != 0:
             problems.append({"synopsys": "full_miss_level", "side": "bid"})
     return problems
 
