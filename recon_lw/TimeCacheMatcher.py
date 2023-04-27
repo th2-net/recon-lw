@@ -34,7 +34,7 @@ class TimeCacheMatcher:
                     self._time_index.add([ts, key1])
                 else:
                     self._match_index[key1][0] = o
-            elif key2 is None:
+            elif key2 is not None:
                 if key2 not in self._match_index:
                     self._match_index[key2] = [None, o]
                     self._time_index.add([ts, key2])
