@@ -202,7 +202,7 @@ def flush_ob_stream(ts,rule_settings,event_sequence, save_events_func):
         dupl_events.append(d_ev)
     save_events_func(dupl_events)
     duplicates.clear()
-    flush_sequence_clear_cache(n_processed,rule_settings["sequence_cache"])
+    flush_sequence_clear_cache(len(seq_batch),rule_settings["sequence_cache"])
 
 
 def init_aggr_seq(order_book):
