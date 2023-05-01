@@ -116,6 +116,7 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
                                                           body=log_book,
                                                           parentId=parent_event["eventId"])
                         log_event["attachedMessageIds"] = [mess["messageId"]]
+                        log_event["scope"] = mess["sessionId"]
                         events.append(log_event)
 
             results = check_book_rule(book, event_sequence)
