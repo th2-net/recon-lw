@@ -30,7 +30,7 @@ def compare_full_vs_aggr(full_book, aggr_book):
                 price_condition = full_levels[i] == aggr_levels[i]["price"]
                 num_orders_condition = len(full_book[side][full_levels[i]]) == \
                                        (aggr_levels[i]["real_num_orders"] + aggr_levels[i]["impl_num_orders"])
-                size_condition = sum(full_book[side][full_levels[i]].vales()) == \
+                size_condition = sum(full_book[side][full_levels[i]].values()) == \
                                  (aggr_levels[i]["real_qty"] + aggr_levels[i]["impl_qty"])
                 if not (price_condition and num_orders_condition and size_condition):
                     problems.append({"synopsys": synopsys(price_condition, num_orders_condition, size_condition),
@@ -132,7 +132,7 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                    False,
                                    {"aggr_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
-                                    "version": match[1]["body"]["aggr_seq"]["limit_v"]})
+                                    "version": match[1]["body"]["aggr_seq"]["limit_v"], "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
 
 
@@ -163,7 +163,7 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                    False,
                                    {"top_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
-                                    "version": match[1]["body"]["aggr_seq"]["limit_v"]})
+                                    "version": match[1]["body"]["aggr_seq"]["limit_v"], "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
 
 
