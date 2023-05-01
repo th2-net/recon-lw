@@ -145,6 +145,7 @@ def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book
             gap_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"],"SeqGap",event_sequence,ok=False,
                                               body={"seq_num": seq} ,parentId=parent_event["eventId"])
             events.append(gap_event)
+            n_processed += 1
             continue
         chunk = message_utils.expand_message(mess)
         for m_upd in chunk:
@@ -203,7 +204,7 @@ def flush_ob_stream(ts,rule_settings,event_sequence, save_events_func):
         dupl_events.append(d_ev)
     save_events_func(dupl_events)
     duplicates.clear()
-    flush_sequence_clear_cache(len(seq_batch),rule_settings["sequence_cache"])
+    flush_sequence_clear_cache(n_processed,rule_settings["sequence_cache"])
 
 
 def init_aggr_seq(order_book):
