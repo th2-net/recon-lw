@@ -4,6 +4,7 @@ from th2_data_services.data import Data
 from th2_data_services.utils.message_utils import message_utils
 from os import listdir
 from os import path
+from recon_lw.EventsSaver import EventsSaver
 
 
 def time_stamp_key(ts):
@@ -152,19 +153,6 @@ def create_event_id(event_sequence):
     return event_sequence["name"] + "_" + event_sequence["stamp"] +"-" +str(event_sequence["n"])
 
 
-def save_events_standalone(new_chunk, buffer, result_events_path):
-    buffer.extend(new_chunk)
-    if len(buffer) > 50000:
-        dump_buffer(buffer,result_events_path)
-
-
-def dump_buffer(buffer, result_events_path):
-    events = Data(buffer)
-    events_file = result_events_path + "/" + buffer[0]["eventId"] + ".pickle"
-    events.build_cache(events_file)
-    buffer.clear()
-
-
 def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
     ts = datetime.now()
     e = {"eventId": create_event_id(event_sequence),
@@ -182,10 +170,11 @@ def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
 def execute_standalone(message_pickle_path, sessions_list, result_events_path, rules_settings_dict):
     events_buffer = []
     box_ts = datetime.now()
+    events_saver = EventsSaver(result_events_path)
     event_sequence = {"name": "recon_lw", "stamp": str(box_ts.timestamp()), "n": 0}
     root_event = create_event("recon_lw " + box_ts.isoformat(), "Microservice", event_sequence)
 
-    save_events_standalone([root_event], events_buffer, result_events_path)
+    events_saver.save_events([root_event])
     for rule_key, rule_settings in rules_settings_dict.items():
         rule_settings["rule_root_event"] = create_event(rule_key, "LwReconRule",
                                                         event_sequence, parentId=root_event["eventId"])
@@ -197,8 +186,7 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
             rule_settings["flush_func"] = flush_matcher
         rule_settings["init_func"](rule_settings)
 
-    save_events_standalone([r["rule_root_event"] for r in rules_settings_dict.values()],
-                           events_buffer,result_events_path)
+    events_saver.save_events([r["rule_root_event"] for r in rules_settings_dict.values()])
     if sessions_list is not None and len(sessions_list):
         sessions_set = set(sessions_list)
         streams = open_streams(message_pickle_path,
@@ -209,7 +197,7 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
     message_buffer = [None]*100
     buffer_len = 100
     while len(streams)>0:
-        next_batch_len = get_next_batch(streams, message_buffer, buffer_len)
+        next_batch_len = get_next_batch(streams, message_buffer, buffer_len, lambda m: m["timestamp"])
         buffer_to_process = message_buffer
         if next_batch_len < buffer_len:
             buffer_to_process = message_buffer[:next_batch_len]
@@ -217,16 +205,13 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
             rule_settings["collect_func"](buffer_to_process, rule_settings)
             ts = buffer_to_process[len(buffer_to_process)-1]["timestamp"]
             rule_settings["flush_func"](ts, rule_settings, event_sequence,
-                                        lambda ev_batch: save_events_standalone(ev_batch, events_buffer,
-                                                                                result_events_path))
+                                        lambda ev_batch: events_saver.save_events(ev_batch))
     #final flush
     for rule_settings in rules_settings_dict.values():
         rule_settings["flush_func"](None, rule_settings, event_sequence,
-                                    lambda ev_batch: save_events_standalone(ev_batch, events_buffer,
-                                                                            result_events_path))
+                                    lambda ev_batch: events_saver.save_events(ev_batch))
     #one final flush
-    if len(events_buffer) > 0:
-        dump_buffer(events_buffer,result_events_path)
+    events_saver.flush()
 
 
 def init_matcher(rule_settings):
@@ -302,6 +287,27 @@ def protocol(m):
     return m["body"]["metadata"]["protocol"]
 
 
+def open_scoped_events_streams(streams_path, name_filter=None):
+    streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
+    files = listdir(streams_path)
+    files.sort()
+    scopes_streams = {}
+    for f in files:
+        if ".pickle" not in f:
+            continue
+        if name_filter is not None and not name_filter(f):
+            continue
+        scope = f[:f.index("_")]
+        if scope not in scopes_streams:
+            scopes_streams[scope] = Data.from_cache_file(path.join(streams_path, f))
+        else:
+            scopes_streams[scope] += Data.from_cache_file(path.join(streams_path, f))
+    for strm in scopes_streams.values():
+        ts0 = {"epochSecond": 0, "nano": 0}
+        streams.add((ts0, iter(strm), None))
+    return streams
+
+
 def open_streams(streams_path, name_filter=None):
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
     files = listdir(streams_path)
@@ -317,7 +323,7 @@ def open_streams(streams_path, name_filter=None):
     return streams
 
 
-def get_next_batch(streams, batch, b_len):
+def get_next_batch(streams, batch, b_len, get_timestamp_func):
     batch_pos = 0
     batch_len = b_len #len(batch)
     while batch_pos < batch_len and len(streams) > 0:
@@ -326,8 +332,8 @@ def get_next_batch(streams, batch, b_len):
             if next_stream[2] is not None:
                 batch[batch_pos] = next_stream[2]
                 batch_pos += 1
-            m = next(next_stream[1])
-            streams.add((m["timestamp"],next_stream[1], m))
+            o = next(next_stream[1])
+            streams.add((get_timestamp_func(o), next_stream[1], o))
         except StopIteration as e:
             continue
     return batch_pos
