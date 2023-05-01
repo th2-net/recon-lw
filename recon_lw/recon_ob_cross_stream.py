@@ -177,7 +177,7 @@ def split_every(n, data):
 
 
 #{"horizon_dely": 180, full_session: "aaa", aggr_session: "bbb", top_session: "ccc"}
-def ob_compare_streams(source_events, results_path, rules_dict):
+def ob_compare_streams(source_events_path, results_path, rules_dict):
     events_saver = EventsSaver(results_path)
     processors = []
     root_event = events_saver.create_event("recon_lw_ob_streams " + datetime.now().isoformat(), "Microservice")
@@ -215,12 +215,19 @@ def ob_compare_streams(source_events, results_path, rules_dict):
                                              )
             processors.append(processor_top)
 
-    order_books_events = source_events.filter(lambda e: e["eventType"] == "OrderBook")
+    #order_books_events = source_events.filter(lambda e: e["eventType"] == "OrderBook")
 
-    buffers = split_every(100, order_books_events)
-    for buffer in buffers:
+    #buffers = split_every(100, order_books_events)
+    streams = recon_lw.open_scoped_events_streams(source_events_path, lambda n: "default_" not in n)
+    message_buffer = [None]*100
+    buffer_len = 100
+    while len(streams)>0:
+        next_batch_len = recon_lw.get_next_batch(streams, message_buffer, buffer_len, lambda e: e["body"]["timestamp"])
+        buffer_to_process = message_buffer
+        if next_batch_len < buffer_len:
+            buffer_to_process = message_buffer[:next_batch_len]
         for p in processors:
-            p.process_objects_batch(buffer)
+            p.process_objects_batch(buffer_to_process)
 
     for p in processors:
         p.flush_all()
