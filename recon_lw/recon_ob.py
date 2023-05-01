@@ -215,7 +215,7 @@ def init_aggr_seq(order_book: dict) -> None:
     order_book["aggr_seq"] = {"top_v": 0, "top_delta": 0, "limit_v": 0, "limit_delta": 0}
 
 
-def reflect_price_update_in_version(side, price, order_book):
+def reflect_price_update_in_version(side: str, price: float, order_book: dict):
     level = get_price_level(side, price, order_book)
     max_levels = order_book["aggr_max_levels"]
     if level <= max_levels:
@@ -226,7 +226,7 @@ def reflect_price_update_in_version(side, price, order_book):
         order_book["aggr_seq"]["top_delta"] = 1
 
 
-def ob_add_order(order_id, price, size, side, order_book):
+def ob_add_order(order_id: str, price: float, size: int, side: str, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
@@ -242,7 +242,7 @@ def ob_add_order(order_id, price, size, side, order_book):
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_update_order(order_id, price, size, order_book):
+def ob_update_order(order_id: str, price: float, size: int, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
@@ -272,7 +272,7 @@ def ob_update_order(order_id, price, size, order_book):
     return {}, log
 
 
-def ob_delete_order(order_id, order_book):
+def ob_delete_order(order_id: str, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
@@ -299,7 +299,7 @@ def ob_delete_order(order_id, order_book):
     return {}, log
 
 
-def ob_trade_order(order_id, traded_size, order_book):
+def ob_trade_order(order_id: str, traded_size: int, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
@@ -330,7 +330,7 @@ def ob_trade_order(order_id, traded_size, order_book):
     return {}, log
 
 
-def ob_clean_book(order_book):
+def ob_clean_book(order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
@@ -344,7 +344,7 @@ def ob_clean_book(order_book):
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_change_status(new_status, order_book):
+def ob_change_status(new_status: str, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["status"] = new_status
@@ -355,7 +355,7 @@ def ob_change_status(new_status, order_book):
     return {}, [copy.deepcopy(order_book)]
 
 
-def find_order_position(order_id, order_book):
+def find_order_position(order_id: str, order_book: dict) -> tuple:
     for side in ["ask", "bid"]:
         for pr, orders in order_book[side].items():
             if order_id in orders:
@@ -364,7 +364,7 @@ def find_order_position(order_id, order_book):
 
 
 # levels start with 1 (1,2,......
-def get_price_level(side, p, order_book):
+def get_price_level(side: str, p: float, order_book: dict):
     if p not in order_book[side]:
         return -1
     levels = list(order_book[side].keys())
@@ -372,7 +372,7 @@ def get_price_level(side, p, order_book):
     return levels.index(p) + 1 if side == "ask" else len(levels) - levels.index(p)
 
 
-def ob_aggr_add_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
+def ob_aggr_add_level(side: str, level: int, price: float, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
@@ -395,7 +395,7 @@ def ob_aggr_add_level(side, level, price, real_qty, real_num_orders, impl_qty, i
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_aggr_delete_level(side, level, order_book):
+def ob_aggr_delete_level(side: str, level: int, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
@@ -413,7 +413,7 @@ def ob_aggr_delete_level(side, level, order_book):
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
+def ob_aggr_update_level(side: str, level: int, price: float, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
@@ -434,7 +434,7 @@ def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_aggr_clean_book(order_book):
+def ob_aggr_clean_book(order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
@@ -446,7 +446,7 @@ def ob_aggr_clean_book(order_book):
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_top_clean_book(order_book):
+def ob_top_clean_book(order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
 
