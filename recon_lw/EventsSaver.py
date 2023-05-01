@@ -6,20 +6,28 @@ from th2_data_services.data import Data
 class EventsSaver:
     def __init__(self, path):
         self._event_sequence = {"name": "recon_lw", "stamp": str(datetime.now().timestamp()), "n": 0}
-        self._buffer = []
+        self._scopes_buffers = {}
         self._path = path
 
     def flush(self):
-        if self._buffer:
-            events = Data(self._buffer)
-            events_file = self._path / (self._buffer[0]["eventId"] + ".pickle")
+        for scope in self._scopes_buffers.keys():
+            self.flush_scope(scope)
+
+    def flush_scope(self, scope):
+        if scope in self._scopes_buffers:
+            events = Data(self._scopes_buffers[scope])
+            events_file = self._path / (scope + "_" + self._scopes_buffers[scope][0]["eventId"] + ".pickle")
             events.build_cache(events_file)
-            self._buffer.clear()
+            self._scopes_buffers[scope].clear()
 
     def save_events(self, batch):
-        self._buffer.extend(batch)
-        if len(self._buffer) > 50000:
-            self.flush()
+        for e in batch:
+            scope = e["scope"] if "scope" in e else "default"
+            if scope not in self._scopes_buffers:
+                self._scopes_buffers[scope] = []
+            self._scopes_buffers[scope].append(e)
+            if len(self._scopes_buffers[scope]) > 50000:
+                self.flush_scope(scope)
 
     def create_event(self, name, type, ok=True, body=None, parentId=None):
         ts = datetime.now()
