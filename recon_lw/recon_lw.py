@@ -297,7 +297,7 @@ def open_scoped_events_streams(streams_path, name_filter=None):
             continue
         if name_filter is not None and not name_filter(f):
             continue
-        scope = f[:f.index("_")]
+        scope = f[:f.index("_scope_")]
         if scope not in scopes_streams:
             scopes_streams[scope] = Data.from_cache_file(path.join(streams_path, f))
         else:
