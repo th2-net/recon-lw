@@ -1,6 +1,7 @@
 from recon_lw import recon_lw
 from datetime import datetime, timedelta
 from th2_data_services.data import Data
+from pathlib import Path
 
 
 class EventsSaver:
@@ -16,7 +17,7 @@ class EventsSaver:
     def flush_scope(self, scope):
         if scope in self._scopes_buffers:
             events = Data(self._scopes_buffers[scope])
-            events_file = self._path / (scope + "_scope_" + self._scopes_buffers[scope][0]["eventId"] + ".pickle")
+            events_file = Path(self._path) / (scope + "_scope_" + self._scopes_buffers[scope][0]["eventId"] + ".pickle")
             events.build_cache(events_file)
             self._scopes_buffers[scope].clear()
 
