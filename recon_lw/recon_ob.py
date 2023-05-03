@@ -45,7 +45,7 @@ def flush_sequence_get_collection(current_ts: dict, horizon_delay: int, sequence
         horizon_edge = times.bisect_key_left(recon_lw.time_stamp_key(edge_timestamp))
         if horizon_edge < len(times):
             seq_index = times[horizon_edge][1]
-            sub_seq = sequence.irange(None, (seq_index, None))
+            sub_seq = sequence.irange(None, (seq_index, None), (False, False))
             for i in range(0, horizon_edge):
                 times.pop(0)
         else:
