@@ -67,7 +67,7 @@ def process_market_data_update(mess: dict, events: list, books_cache: dict, get_
                                update_book_rule,
                                check_book_rule, event_sequence: dict, parent_event: dict,
                                initial_book_params: dict, log_books_filter) -> None:
-    book_id, result = get_book_id_func(mess)
+    book_ids_list, result = get_book_id_func(mess)
     if result is not None:
         book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor",
                                               event_sequence,
@@ -77,7 +77,9 @@ def process_market_data_update(mess: dict, events: list, books_cache: dict, get_
         book_id_event["attachedMessageIds"] = [mess["messageId"]]
         events.append(book_id_event)
 
-    if book_id is not None:
+    if book_ids_list is None:
+        return
+    for book_id in book_ids_list:
         if book_id not in books_cache:
             books_cache[book_id] = copy.deepcopy(initial_book_params)
             # books_cache[book_id] = {"ask": {}, "bid": {}, "status": "?"}
