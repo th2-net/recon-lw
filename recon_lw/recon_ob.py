@@ -66,7 +66,7 @@ def flush_sequence_clear_cache(processed_len, sequence_cache):
 
 def process_market_data_update(mess, events,  books_cache, get_book_id_func ,update_book_rule,
                                check_book_rule, event_sequence, parent_event, initial_book_params, log_books_filter):
-    book_id, result = get_book_id_func(mess)
+    book_ids_list, result = get_book_id_func(mess)
     if result is not None:
         book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor", event_sequence,
                                               ok=False,
@@ -75,7 +75,9 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
         book_id_event["attachedMessageIds"] = [mess["messageId"]]
         events.append(book_id_event)
 
-    if book_id is not None:
+    if book_ids_list is None:
+        return
+    for book_id in book_ids_list:
         if book_id not in books_cache:
             books_cache[book_id] = copy.deepcopy(initial_book_params)            
             #books_cache[book_id] = {"ask": {}, "bid": {}, "status": "?"}
