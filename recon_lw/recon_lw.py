@@ -128,7 +128,7 @@ def flush_old(current_ts, horizon_delay, time_index):
 # match_compare_func takes m1, m2  returns e
 # end_events_func tekes iterable of events
 def rule_flush(current_ts, horizon_delay, match_index, time_index, message_cache,
-               interpret_func, event_sequence, send_events_func, parent_event):
+               interpret_func, event_sequence, send_events_func, parent_event, live_orders_cache):
     old_keys = flush_old(current_ts, horizon_delay, time_index)
     events = []
     for k in old_keys:
@@ -137,7 +137,7 @@ def rule_flush(current_ts, horizon_delay, match_index, time_index, message_cache
             #request already processed through different key
             continue
 
-        results = interpret_func([message_cache_pop(item, message_cache) for item in elem], event_sequence)
+        results = interpret_func([message_cache_pop(item, message_cache) for item in elem],live_orders_cache,event_sequence)
 #       result = interpret_func(message_cache_pop(elem[0], message_cache),
 #                                message_cache_pop(elem[1], message_cache), event_sequence)
         if results is not None:
@@ -223,6 +223,8 @@ def init_matcher(rule_settings):
 def collect_matcher(batch, rule_settings):
     rule_match_func = rule_settings["rule_match_func"]
     rule_match_func(batch, rule_settings)
+    if "live_orders_cache" in rule_settings:
+        rule_settings["live_orders_cache"].process_objects_batch(batch)
 
 
 def flush_matcher(ts,rule_settings,event_sequence, save_events_func):
@@ -234,7 +236,8 @@ def flush_matcher(ts,rule_settings,event_sequence, save_events_func):
                rule_settings["interpret_func"],
                event_sequence,
                save_events_func,
-               rule_settings["rule_root_event"])
+               rule_settings["rule_root_event"],
+               rule_settings["live_orders_cache"] if "live_orders_cache" in rule_settings else None)
 
 
 def simplify_message(m):
