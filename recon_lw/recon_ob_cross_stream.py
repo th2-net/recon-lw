@@ -110,13 +110,14 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_aggr(match[0]["body"], match[1]["body"])
         if len(comp_res) > 0:
-            error_event = create_event("StreamMismatch",
-                                       "StreamMismatch",
+            error_event = create_event("StreamMismatchAggr",
+                                       "StreamMismatchAggr",
                                        False,
                                        {"full_book_event": match[0]["eventId"],
                                         "aggr_book_event": match[1]["eventId"],
                                         "book_id": match[0]["body"]["book_id"],
-                                        "version": match[0]["body"]["aggr_seq"]["limit_v"],
+                                        "limit_v": match[0]["body"]["aggr_seq"]["limit_v"],
+                                        "top_v": match[0]["body"]["aggr_seq"]["top_v"],
                                         "errors": comp_res})
             save_events([error_event])
     elif match[0] is not None:
@@ -126,7 +127,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                    False,
                                    {"full_book_event": match[0]["eventId"],
                                     "book_id": match[0]["body"]["book_id"],
-                                    "version": match[0]["body"]["aggr_seq"]["limit_v"],
+                                    "limit_v": match[0]["body"]["aggr_seq"]["limit_v"],
+                                    "top_v": match[0]["body"]["aggr_seq"]["top_v"],
                                     "sessionId": match[0]["body"]["sessionId"],
                                     "tech_info": tech_info})
         save_events([error_event])
@@ -136,7 +138,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                    False,
                                    {"aggr_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
-                                    "version": match[1]["body"]["aggr_seq"]["limit_v"],
+                                    "limit_v": match[1]["body"]["aggr_seq"]["limit_v"],
+                                   "top_v": match[1]["body"]["aggr_seq"]["top_v"],
                                     "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
 
@@ -145,13 +148,14 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_top(match[0]["body"], match[1]["body"])
         if len(comp_res) > 0:
-            error_event = create_event("StreamMismatch",
-                                       "StreamMismatch",
+            error_event = create_event("StreamMismatchTop",
+                                       "StreamMismatchTop",
                                        False,
                                        {"full_book_event": match[0]["eventId"],
                                         "top_book_event": match[1]["eventId"],
                                         "book_id": match[0]["body"]["book_id"],
-                                        "version": match[0]["body"]["aggr_seq"]["limit_v"],
+                                        "limit_v": match[0]["body"]["aggr_seq"]["limit_v"],
+                                        "top_v": match[0]["body"]["aggr_seq"]["top_v"],
                                         "errors": comp_res})
             save_events([error_event])
     elif match[0] is not None:
@@ -160,7 +164,9 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                    False,
                                    {"full_book_event": match[0]["eventId"],
                                     "book_id": match[0]["body"]["book_id"],
-                                    "version": match[0]["body"]["aggr_seq"]["limit_v"]})
+                                    "limit_v": match[0]["body"]["aggr_seq"]["limit_v"],
+                                    "top_v": match[0]["body"]["aggr_seq"]["top_v"],
+                                    "sessionId": match[0]["body"]["sessionId"]})
         save_events([error_event])
     elif match[1] is not None:
         error_event = create_event("StreamMismatchNoFull",
@@ -168,7 +174,8 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                    False,
                                    {"top_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
-                                    "version": match[1]["body"]["aggr_seq"]["limit_v"],
+                                    "limit_v": match[1]["body"]["aggr_seq"]["limit_v"],
+                                    "top_v": match[1]["body"]["aggr_seq"]["limit_v"],
                                     "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
 
