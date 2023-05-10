@@ -106,8 +106,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_aggr(match[0]["body"],match[1]["body"])
         if len(comp_res) > 0:
-            error_event = create_event("StreamMismatch",
-                                       "StreamMismatch",
+            error_event = create_event("StreamMismatchAggr",
+                                       "StreamMismatchAggr",
                                        False,
                                        {"full_book_event": match[0]["eventId"],
                                         "aggr_book_event": match[1]["eventId"],
@@ -144,8 +144,8 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_top(match[0]["body"],match[1]["body"])
         if len(comp_res) > 0:
-            error_event = create_event("StreamMismatch",
-                                       "StreamMismatch",
+            error_event = create_event("StreamMismatchTop",
+                                       "StreamMismatchTop",
                                        False,
                                        {"full_book_event": match[0]["eventId"],
                                         "top_book_event": match[1]["eventId"],
