@@ -83,6 +83,9 @@ def compare_full_vs_top(full_book, top_book):
 
 
 def ob_compare_get_timestamp_key1_key2_aggr(o,custom_settings):
+    if o["body"]["aggr_seq"]["limit_delta"] != 1:
+        return None, None, None
+
     if o["body"]["sessionId"] == custom_settings["full_session"]:
         return o["body"]["timestamp"], "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["limit_v"]), None
 
@@ -93,6 +96,9 @@ def ob_compare_get_timestamp_key1_key2_aggr(o,custom_settings):
 
 
 def ob_compare_get_timestamp_key1_key2_top(o, custom_settings):
+    if o["body"]["aggr_seq"]["top_delta"] != 1:
+        return None, None, None
+
     if o["body"]["sessionId"] == custom_settings["full_session"]:
         return o["body"]["timestamp"], "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["top_v"]), None
 
