@@ -88,7 +88,7 @@ def process_market_data_update(mess: dict, events: list, books_cache: dict, get_
         operations = update_book_rule(book, mess)
         if operations is None:
             return
-obs = []
+        obs = []
         for operation, parameters in operations:
             initial_book = copy.deepcopy(book)
             initial_parameters = copy.copy(parameters)
