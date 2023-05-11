@@ -136,9 +136,13 @@ def process_market_data_update(mess: dict, events: list, books_cache: dict, get_
                     r["attachedMessageIds"] = [mess["messageId"]]
                     events.append(r)
 
-        if len(obs) >0 and aggregate_batch_updates:
+        if len(obs) >1 and aggregate_batch_updates:
             same_side = all(obs[i]["body"]["aggr_seq"]["affected_side"] == obs[0]["body"]["aggr_seq"]["affected_side"] for i in range(1, len(obs)))
             same_level = all(obs[i]["body"]["aggr_seq"]["affected_level"] == obs[0]["body"]["aggr_seq"]["affected_level"] for i in range(1, len(obs)))
+            obs[0]["body"]["debug_batch_updates"] = len(obs)
+            obs[0]["body"]["debug_same_side"] = same_side
+            obs[0]["body"]["debug_same_level"] = same_level
+
             if same_side:
                 skip_top = 0
                 skip_aggr = 0
@@ -243,6 +247,10 @@ def init_aggr_seq(order_book: dict) -> None:
     order_book["aggr_seq"] = {"top_v": 0, "top_delta": 0, "limit_v": 0, "limit_delta": 0}
 
 
+def reset_aggr_seq(order_book):
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0, "affected_side": "na", "affected_level": -1})
+
+
 def reflect_price_update_in_version(side: str, price: float, order_book: dict):
     level = get_price_level(side, price, order_book)
     order_book["aggr_seq"]["affected_side"] = side
@@ -260,7 +268,8 @@ def reflect_price_update_in_version(side: str, price: float, order_book: dict):
 def ob_add_order(order_id: str, price: float, size: int, side: str, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    else:
+        reset_aggr_seq(order_book)
 
     if find_order_position(order_id, order_book)[0] is not None:
         return {"error": order_id + " already exists"}, []
@@ -276,7 +285,8 @@ def ob_add_order(order_id: str, price: float, size: int, side: str, order_book: 
 def ob_update_order(order_id: str, price: float, size: int, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    else:
+        reset_aggr_seq(order_book)
 
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
@@ -306,7 +316,8 @@ def ob_update_order(order_id: str, price: float, size: int, order_book: dict) ->
 def ob_delete_order(order_id: str, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    else:
+        reset_aggr_seq(order_book)
 
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
@@ -333,7 +344,9 @@ def ob_delete_order(order_id: str, order_book: dict) -> tuple:
 def ob_trade_order(order_id: str, traded_size: int, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    else:
+        reset_aggr_seq(order_book)
+
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     log = []
     if old_side is None:
@@ -364,7 +377,9 @@ def ob_trade_order(order_id: str, traded_size: int, order_book: dict) -> tuple:
 def ob_clean_book(order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    else:
+        reset_aggr_seq(order_book)
+
     for side_key in ["ask", "bid"]:
         if side_key in order_book:
             order_book[side_key].clear()
@@ -378,6 +393,9 @@ def ob_clean_book(order_book: dict) -> tuple:
 def ob_change_status(new_status: str, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
+    else:
+        reset_aggr_seq(order_book)
+
     order_book["status"] = new_status
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["limit_v"] += 1
@@ -407,7 +425,9 @@ def ob_aggr_add_level(side: str, level: int, price: float, real_qty: int, real_n
                       impl_num_orders: int, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    else:
+        reset_aggr_seq(order_book)
+
     result_body = {}
     max_levels = order_book["aggr_max_levels"]
     side_key = side + "_aggr"
@@ -429,7 +449,9 @@ def ob_aggr_add_level(side: str, level: int, price: float, real_qty: int, real_n
 def ob_aggr_delete_level(side: str, level: int, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    else:
+        reset_aggr_seq(order_book)
+
     result_body = {}
     side_key = side + "_aggr"
     del_index = level - 1
@@ -448,7 +470,9 @@ def ob_aggr_update_level(side: str, level: int, price: float, real_qty: int, rea
                          impl_num_orders: int, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    else:
+        reset_aggr_seq(order_book)
+
     result_body = {}
     max_levels = order_book["aggr_max_levels"]
     side_key = side + "_aggr"
@@ -469,7 +493,9 @@ def ob_aggr_update_level(side: str, level: int, price: float, real_qty: int, rea
 def ob_aggr_clean_book(order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    else:
+        reset_aggr_seq(order_book)
+
     for side_key in ["ask_aggr", "bid_aggr"]:
         if side_key in order_book:
             order_book[side_key].clear()
@@ -481,6 +507,8 @@ def ob_aggr_clean_book(order_book: dict) -> tuple:
 def ob_top_clean_book(order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
+    else:
+        reset_aggr_seq(order_book)
 
     order_book["ask_price"] = 0
     order_book["ask_real_qty"] = 0
@@ -504,6 +532,9 @@ def ob_top_update(ask_price: str, ask_real_qty: str, ask_impl_qty: str, ask_real
                   order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
+    else:
+        reset_aggr_seq(order_book)
+
     order_book["ask_price"] = ask_price
     order_book["ask_real_qty"] = ask_real_qty
     order_book["ask_impl_qty"] = ask_impl_qty
