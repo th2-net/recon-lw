@@ -66,7 +66,8 @@ def flush_sequence_clear_cache(processed_len: int, sequence_cache: dict) -> None
 def process_market_data_update(mess: dict, events: list, books_cache: dict, get_book_id_func,
                                update_book_rule,
                                check_book_rule, event_sequence: dict, parent_event: dict,
-                               initial_book_params: dict, log_books_filter) -> None:
+                               initial_book_params: dict, log_books_filter,
+                               aggregate_batch_updates) -> None:
     book_ids_list, result = get_book_id_func(mess)
     if result is not None:
         book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor",
@@ -87,7 +88,7 @@ def process_market_data_update(mess: dict, events: list, books_cache: dict, get_
         operations = update_book_rule(book, mess)
         if operations is None:
             return
-
+obs = []
         for operation, parameters in operations:
             initial_book = copy.deepcopy(book)
             initial_parameters = copy.copy(parameters)
@@ -121,7 +122,7 @@ def process_market_data_update(mess: dict, events: list, books_cache: dict, get_
                                                           parentId=parent_event["eventId"])
                         log_event["attachedMessageIds"] = [mess["messageId"]]
                         log_event["scope"] = mess["sessionId"]
-                        events.append(log_event)
+                        obs.append(log_event)
 
             results = check_book_rule(book, event_sequence)
             if results is not None:
@@ -135,12 +136,36 @@ def process_market_data_update(mess: dict, events: list, books_cache: dict, get_
                     r["attachedMessageIds"] = [mess["messageId"]]
                     events.append(r)
 
+        if len(obs) >0 and aggregate_batch_updates:
+            same_side = all(obs[i]["body"]["aggr_seq"]["affected_side"] == obs[0]["body"]["aggr_seq"]["affected_side"] for i in range(1, len(obs)))
+            same_level = all(obs[i]["body"]["aggr_seq"]["affected_level"] == obs[0]["body"]["aggr_seq"]["affected_level"] for i in range(1, len(obs)))
+            if same_side:
+                skip_top = 0
+                skip_aggr = 0
+                for i in range(len(obs)-1):
+                    if obs[i]["body"]["aggr_seq"]["top_delta"] == 1:
+                        skip_top += 1
+                    obs[i]["body"]["aggr_seq"]["top_delta"] = 0
+                    obs[i]["body"]["aggr_seq"]["top_v"] = -1
+                    if same_level:
+                        if obs[i]["body"]["aggr_seq"]["aggr_delta"] == 1:
+                            skip_aggr += 1
+                        obs[i]["body"]["aggr_seq"]["aggr_delta"] = 0
+                        obs[i]["body"]["aggr_seq"]["aggr_v"] = -1
+                obs[-1]["body"]["aggr_seq"]["top_delta"] = 1
+                obs[-1]["body"]["aggr_seq"]["top_v"] -= skip_top
+                if same_level:
+                    obs[-1]["body"]["aggr_seq"]["aggr_delta"] = 1
+                    obs[-1]["body"]["aggr_seq"]["aggr_v"] -= skip_aggr
+
+        events.extend(obs)
+
 
 def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book_id_func,
                      update_book_rule,
                      check_book_rule, event_sequence: dict, send_events_func, parent_event: dict,
                      initial_book_params: dict,
-                     log_books_filter) -> int:
+                     log_books_filter, aggregate_batch_updates) -> int:
     events = []
     n_processed = 0
     for m in sequenced_batch:
@@ -157,7 +182,7 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
         for m_upd in chunk:
             process_market_data_update(m_upd, events, books_cache, get_book_id_func, update_book_rule,
                                        check_book_rule, event_sequence, parent_event, initial_book_params,
-                                       log_books_filter)
+                                       log_books_filter, aggregate_batch_updates)
         n_processed += 1
 
     send_events_func(events)
@@ -194,7 +219,8 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
                                    save_events_func,
                                    rule_settings["rule_root_event"],
                                    rule_settings["initial_book_params"],
-                                   rule_settings["log_books_filter"] if "log_books_filter" in rule_settings else None)
+                                   rule_settings["log_books_filter"] if "log_books_filter" in rule_settings else None,
+                                   rule_settings["aggregate_batch_updates"] if "aggregate_batch_updates" in rule_settings else False)
     ## Process duplicated
     duplicates = rule_settings["sequence_cache"]["duplicates"]
     n_dupl = len(duplicates)
@@ -219,6 +245,9 @@ def init_aggr_seq(order_book: dict) -> None:
 
 def reflect_price_update_in_version(side: str, price: float, order_book: dict):
     level = get_price_level(side, price, order_book)
+    order_book["aggr_seq"]["affected_side"] = side
+    order_book["aggr_seq"]["affected_level"] = level
+
     max_levels = order_book["aggr_max_levels"]
     if level <= max_levels:
         order_book["aggr_seq"]["limit_v"] += 1
