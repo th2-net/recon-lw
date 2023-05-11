@@ -64,31 +64,40 @@ def flush_sequence_clear_cache(processed_len, sequence_cache):
         sequence.pop(0)
 
 
-def process_market_data_update(mess, events,  books_cache, get_book_id_func ,update_book_rule,
+def process_market_data_update(mess_batch, events,  books_cache, get_book_id_func ,update_book_rule,
                                check_book_rule, event_sequence, parent_event, initial_book_params, log_books_filter,
                                aggregate_batch_updates):
-    book_ids_list, result = get_book_id_func(mess)
-    if result is not None:
-        book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor", event_sequence,
-                                              ok=False,
-                                              body=result,
-                                              parentId=parent_event["eventId"])
-        book_id_event["attachedMessageIds"] = [mess["messageId"]]
-        events.append(book_id_event)
+    books_updates = {}
+    for m in mess_batch:
+        book_ids_list, result = get_book_id_func(m)
+        if result is not None:
+            book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor",
+                                                  event_sequence,
+                                                  ok=False,
+                                                  body=result,
+                                                  parentId=parent_event["eventId"])
+            book_id_event["attachedMessageIds"] = [m["messageId"]]
+            events.append(book_id_event)
+        if book_ids_list is not None:
+            for book_id in book_ids_list:
+                if book_id not in books_updates:
+                    books_updates[book_id] = [m]
+                else:
+                    books_updates[book_id].append(m)
 
-    if book_ids_list is None:
-        return
-    for book_id in book_ids_list:
+    for book_id in books_updates.keys():
         if book_id not in books_cache:
             books_cache[book_id] = copy.deepcopy(initial_book_params)            
             #books_cache[book_id] = {"ask": {}, "bid": {}, "status": "?"}
         book = books_cache[book_id]
-        operations = update_book_rule(book, mess)
-        if operations is None:
-            return
+        operations = []
+        for m in books_updates[book_id]:
+            m_operations = update_book_rule(book, m)
+            for op, par in m_operations:
+                operations.append((op, par, m))
 
         obs = []
-        for operation, parameters in operations:
+        for operation, parameters, mess in operations:
             initial_book = copy.deepcopy(book)
             initial_parameters = copy.copy(parameters)
             parameters["order_book"] = book
@@ -135,13 +144,13 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
                     r["attachedMessageIds"] = [mess["messageId"]]
                     events.append(r)
         
-        dbg_event = recon_lw.create_event("DebugEvent:" + mess["sessionId"],
+        dbg_event = recon_lw.create_event("DebugEvent",
                                           "DebugEvent",
                                           event_sequence,
                                           ok=True,
                                           body={"operations": operations, "len(obs)": len(obs), "book_id": book_id},
                                           parentId=parent_event["eventId"])
-        dbg_event["attachedMessageIds"] = [mess["messageId"]]
+        dbg_event["attachedMessageIds"] = list({mess["messageId"] for mess in mess_batch})
         events.append(dbg_event)
 
         if len(obs) >1 and aggregate_batch_updates:
@@ -189,10 +198,13 @@ def process_ob_rules(sequenced_batch, books_cache, get_book_id_func ,update_book
             n_processed += 1
             continue
         chunk = message_utils.expand_message(mess)
-        for m_upd in chunk:
-            process_market_data_update(m_upd, events, books_cache, get_book_id_func, update_book_rule,
-                                       check_book_rule, event_sequence, parent_event, initial_book_params,
-                                       log_books_filter, aggregate_batch_updates)
+        process_market_data_update(chunk, events, books_cache, get_book_id_func, update_book_rule,
+                                   check_book_rule, event_sequence, parent_event, initial_book_params,
+                                   log_books_filter, aggregate_batch_updates)
+        #for m_upd in chunk:
+        #    process_market_data_update(m_upd, events, books_cache, get_book_id_func, update_book_rule,
+        #                               check_book_rule, event_sequence, parent_event, initial_book_params,
+        #                               log_books_filter, aggregate_batch_updates)
         n_processed += 1
 
     send_events_func(events)
