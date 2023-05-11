@@ -134,6 +134,15 @@ def process_market_data_update(mess, events,  books_cache, get_book_id_func ,upd
                     r["parentEventId"] = parent_event["eventId"]
                     r["attachedMessageIds"] = [mess["messageId"]]
                     events.append(r)
+        
+        dbg_event = recon_lw.create_event("DebugEvent:" + mess["sessionId"],
+                                          "DebugEvent",
+                                          event_sequence,
+                                          ok=True,
+                                          body={"operations": operations, "len(obs)": len(obs), "book_id": book_id},
+                                          parentId=parent_event["eventId"])
+        dbg_event["attachedMessageIds"] = [mess["messageId"]]
+        events.append(dbg_event)
 
         if len(obs) >1 and aggregate_batch_updates:
             same_side = all(obs[i]["body"]["aggr_seq"]["affected_side"] == obs[0]["body"]["aggr_seq"]["affected_side"] for i in range(1, len(obs)))
