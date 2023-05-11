@@ -148,15 +148,15 @@ def process_market_data_update(mess: dict, events: list, books_cache: dict, get_
                     obs[i]["body"]["aggr_seq"]["top_delta"] = 0
                     obs[i]["body"]["aggr_seq"]["top_v"] = -1
                     if same_level:
-                        if obs[i]["body"]["aggr_seq"]["aggr_delta"] == 1:
+                        if obs[i]["body"]["aggr_seq"]["limit_delta"] == 1:
                             skip_aggr += 1
-                        obs[i]["body"]["aggr_seq"]["aggr_delta"] = 0
-                        obs[i]["body"]["aggr_seq"]["aggr_v"] = -1
+                        obs[i]["body"]["aggr_seq"]["limit_delta"] = 0
+                        obs[i]["body"]["aggr_seq"]["limit_v"] = -1
                 obs[-1]["body"]["aggr_seq"]["top_delta"] = 1
                 obs[-1]["body"]["aggr_seq"]["top_v"] -= skip_top
                 if same_level:
-                    obs[-1]["body"]["aggr_seq"]["aggr_delta"] = 1
-                    obs[-1]["body"]["aggr_seq"]["aggr_v"] -= skip_aggr
+                    obs[-1]["body"]["aggr_seq"]["limit_delta"] = 1
+                    obs[-1]["body"]["aggr_seq"]["limit_v"] -= skip_aggr
 
         events.extend(obs)
 
