@@ -262,14 +262,14 @@ def flush_ob_stream(ts,rule_settings,event_sequence, save_events_func):
 
 
 def init_aggr_seq(order_book):
-    order_book["aggr_seq"] = {"top_v": 0, "top_delta": 0, "limit_v": 0, "limit_delta": 0}
+    order_book["aggr_seq"] = {"top_v": 0, "top_delta": 0, "limit_v": 0, "limit_delta": 0, "limit_v2" : 0, "top_v2" : 0}
 
 
 def reset_aggr_seq(order_book):
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0, "affected_side": "na", "affected_level": -1})
 
 
-def reflect_price_update_in_version(side, price, order_book):
+def reflect_price_update_in_version(side, price,str_time_of_event,order_book):
     level = get_price_level(side, price, order_book)
     order_book["aggr_seq"]["affected_side"] = side
     order_book["aggr_seq"]["affected_level"] = level
@@ -282,8 +282,23 @@ def reflect_price_update_in_version(side, price, order_book):
         order_book["aggr_seq"]["top_v"] += 1
         order_book["aggr_seq"]["top_delta"] = 1
 
+    if "time_of_event" not in order_book:
+        order_book["time_of_event"] = str_time_of_event
+        order_book["aggr_seq"]["limit_v2"] = 0
+        order_book["aggr_seq"]["limit_v2"] = 0
+    else:
+        if str_time_of_event == order_book["time_of_event"]:
+            if level <= max_levels:
+                order_book["aggr_seq"]["limit_v2"] += 1
+            if level == 1:
+                order_book["aggr_seq"]["top_v2"] += 1
+        else:
+            order_book["time_of_event"] = str_time_of_event
+            order_book["aggr_seq"]["limit_v2"] = 0
+            order_book["aggr_seq"]["limit_v2"] = 0
 
-def ob_add_order(order_id, price, size, side, order_book):
+
+def ob_add_order(order_id, price, size, side, str_time_of_event ,order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -296,11 +311,11 @@ def ob_add_order(order_id, price, size, side, order_book):
     else:
         order_book[side][price][order_id] = size
 
-    reflect_price_update_in_version(side, price, order_book)
+    reflect_price_update_in_version(side, price, str_time_of_event ,order_book)
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_update_order(order_id, price, size, order_book):
+def ob_update_order(order_id, price, size, str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -313,11 +328,11 @@ def ob_update_order(order_id, price, size, order_book):
     log = []
     if price == old_price:
         order_book[old_side][old_price][order_id] = size
-        reflect_price_update_in_version(old_side, old_price, order_book)
+        reflect_price_update_in_version(old_side, old_price, str_time_of_event, order_book)
         log.append(copy.deepcopy(order_book))
     else:
         # should no get here but will monitor
-        reflect_price_update_in_version(old_side, old_price, order_book)
+        reflect_price_update_in_version(old_side, old_price, str_time_of_event, order_book)
         order_book[old_side][old_price].pop(order_id)
         if len(order_book[old_side][old_price]) == 0:
             order_book[old_side].pop(old_price)
@@ -325,13 +340,13 @@ def ob_update_order(order_id, price, size, order_book):
         if price not in order_book[old_side]:
             order_book[old_side][price] = {}
         order_book[old_side][price][order_id] = size
-        reflect_price_update_in_version(old_side, price, order_book)
+        reflect_price_update_in_version(old_side, price, str_time_of_event, order_book)
         log.append(copy.deepcopy(order_book))
 
     return {}, log
 
 
-def ob_delete_order(order_id, order_book):
+def ob_delete_order(order_id, str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -342,7 +357,7 @@ def ob_delete_order(order_id, order_book):
         return {"error": order_id + " not found"}, []
 
     log = []
-    reflect_price_update_in_version(old_side, old_price, order_book)
+    reflect_price_update_in_version(old_side, old_price,str_time_of_event,order_book)
     order_book[old_side][old_price].pop(order_id)
     if len(order_book[old_side][old_price]) == 0:
         order_book[old_side].pop(old_price)
@@ -352,6 +367,8 @@ def ob_delete_order(order_id, order_book):
             #back from horizon update
             order_book["aggr_seq"]["limit_delta"] = 2
             order_book["aggr_seq"]["limit_v"] += 1
+            order_book["aggr_seq"]["limit_v2"] += 1
+
             log.append(copy.deepcopy(order_book))
     else:
         log.append(copy.deepcopy(order_book))
@@ -359,7 +376,7 @@ def ob_delete_order(order_id, order_book):
     return {}, log
 
 
-def ob_trade_order(order_id, traded_size ,order_book):
+def ob_trade_order(order_id, traded_size, str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -382,17 +399,18 @@ def ob_trade_order(order_id, traded_size ,order_book):
                 # back from horizon update
                 order_book["aggr_seq"]["limit_delta"] = 2
                 order_book["aggr_seq"]["limit_v"] += 1
+                order_book["aggr_seq"]["limit_v2"] += 1
                 log.append(copy.deepcopy(order_book))
         else:
             log.append(copy.deepcopy(order_book))
     else:
-        reflect_price_update_in_version(old_side, old_price, order_book)
+        reflect_price_update_in_version(old_side, old_price, str_time_of_event ,order_book)
         order_book[old_side][old_price][order_id] -= traded_size
         log.append(copy.deepcopy(order_book))
     return {}, log
 
 
-def ob_clean_book(order_book):
+def ob_clean_book(str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -401,6 +419,8 @@ def ob_clean_book(order_book):
     for side_key in ["ask", "bid"]:
         if side_key in order_book:
             order_book[side_key].clear()
+
+    update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["limit_v"] += 1
     order_book["aggr_seq"]["top_delta"] = 1
@@ -408,13 +428,15 @@ def ob_clean_book(order_book):
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_change_status(new_status, order_book):
+def ob_change_status(new_status, str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
         reset_aggr_seq(order_book)
 
     order_book["status"] = new_status
+
+    update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["limit_v"] += 1
     order_book["aggr_seq"]["top_delta"] = 1
@@ -439,7 +461,22 @@ def get_price_level(side, p, order_book):
     return levels.index(p)+1 if side == "ask" else len(levels)-levels.index(p)
 
 
-def ob_aggr_add_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
+def update_time_and_version(str_time_of_event, order_book):
+    if "time_of_event" not in order_book:
+        order_book["time_of_event"] = str_time_of_event
+        order_book["aggr_seq"]["limit_v2"] = 0
+        order_book["aggr_seq"]["top_v2"] = 0
+    else:
+        if str_time_of_event == order_book["time_of_event"]:
+            order_book["aggr_seq"]["limit_v2"] += 1
+            order_book["aggr_seq"]["top_v2"] += 1
+        else:
+            order_book["aggr_seq"]["limit_v2"] = 0
+            order_book["aggr_seq"]["top_v2"] = 0
+            order_book["time_of_event"] = str_time_of_event
+
+
+def ob_aggr_add_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -458,13 +495,15 @@ def ob_aggr_add_level(side, level, price, real_qty, real_num_orders, impl_qty, i
     order_book[side_key].insert(new_index, new_level)
     if len(order_book[side_key]) == max_levels+1:
         order_book[side_key].pop()
+
+    update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["limit_v"] += 1
 
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_aggr_delete_level(side, level, order_book):
+def ob_aggr_delete_level(side, level, str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -479,12 +518,14 @@ def ob_aggr_delete_level(side, level, order_book):
 
     order_book[side_key].pop(del_index)
 
+    update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["limit_v"] += 1
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders, order_book):
+def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty, impl_num_orders,
+                         str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -501,13 +542,14 @@ def ob_aggr_update_level(side, level, price, real_qty, real_num_orders, impl_qty
     upd_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders, 
                  "impl_qty" : impl_qty, "impl_num_orders": impl_num_orders}
     order_book[side_key][update_index].update(upd_level)
+    update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["limit_v"] += 1
 
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_aggr_clean_book(order_book):
+def ob_aggr_clean_book(str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -516,12 +558,13 @@ def ob_aggr_clean_book(order_book):
     for side_key in ["ask_aggr", "bid_aggr"]:
         if side_key in order_book:
             order_book[side_key].clear()
+    update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["limit_v"] += 1
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_top_clean_book(order_book):
+def ob_top_clean_book(str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -538,6 +581,7 @@ def ob_top_clean_book(order_book):
     order_book["bid_real_n_orders"] = 0
     order_book["bid_impl_n_orders"] = 0
 
+    update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["top_delta"] = 1
     order_book["aggr_seq"]["top_v"] += 1
 
@@ -546,7 +590,7 @@ def ob_top_clean_book(order_book):
 
 def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_impl_n_orders,
                   bid_price, bid_real_qty, bid_impl_qty, bid_real_n_orders, bid_impl_n_orders,
-                  order_book):
+                  str_time_of_event, order_book):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -563,6 +607,7 @@ def ob_top_update(ask_price, ask_real_qty, ask_impl_qty, ask_real_n_orders, ask_
     order_book["bid_real_n_orders"] = bid_real_n_orders
     order_book["bid_impl_n_orders"] = bid_impl_n_orders
 
+    update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["top_delta"] = 1
     order_book["aggr_seq"]["top_v"] += 1
 
