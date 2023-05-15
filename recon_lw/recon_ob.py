@@ -146,7 +146,10 @@ def process_market_data_update(mess_batch, events,  books_cache, get_book_id_fun
                                           "DebugEvent",
                                           event_sequence,
                                           ok=True,
-                                          body={"operations": operations, "len(obs)": len(obs), "book_id": book_id},
+                                          body={"operations": [(op[0], op[2]["messageId"]) for op in operations],
+                                                "len(batch)": len(mess_batch),
+                                                "len(obs)": len(obs),
+                                                "book_id": book_id},
                                           parentId=parent_event["eventId"])
         dbg_event["attachedMessageIds"] = list({mess["messageId"] for mess in mess_batch})
         events.append(dbg_event)
