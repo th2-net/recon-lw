@@ -87,26 +87,34 @@ def compare_full_vs_top(full_book: dict, top_book: dict):
 
 
 def ob_compare_get_timestamp_key1_key2_aggr(o, custom_settings):
-    if o["body"]["aggr_seq"]["limit_delta"] != 1:
+    if o["body"]["aggr_seq"]["limit_delta"] not in [1, 2]:
         return None, None, None
     if o["body"]["sessionId"] == custom_settings["full_session"]:
-        return o["body"]["timestamp"], "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["limit_v"]), None
+        return o["body"]["timestamp"], "{0}_{1}_{2}".format(o["body"]["book_id"],
+                                                            o["body"]["time_of_event"],
+                                                            o["body"]["aggr_seq"]["limit_v2"]), None
 
     if o["body"]["sessionId"] == custom_settings["comp_session"]:
-        return o["body"]["timestamp"], None, "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["limit_v"])
+        return o["body"]["timestamp"], None, "{0}_{1}_{2}".format(o["body"]["book_id"],
+                                                                  o["body"]["time_of_event"],
+                                                                  o["body"]["aggr_seq"]["limit_v2"])
 
     return None, None, None
 
 
 def ob_compare_get_timestamp_key1_key2_top(o, custom_settings):
-    if o["body"]["aggr_seq"]["top_delta"] != 1:
+    if o["body"]["aggr_seq"]["top_delta"] not in [1, 2]:
         return None, None, None
 
     if o["body"]["sessionId"] == custom_settings["full_session"]:
-        return o["body"]["timestamp"], "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["top_v"]), None
+        return o["body"]["timestamp"], "{0}_{1}_{2}".format(o["body"]["book_id"],
+                                                            o["body"]["time_of_event"],
+                                                            o["body"]["aggr_seq"]["top_v2"]), None
 
     if o["body"]["sessionId"] == custom_settings["comp_session"]:
-        return o["body"]["timestamp"], None, "{0}_{1}".format(o["body"]["book_id"], o["body"]["aggr_seq"]["top_v"])
+        return o["body"]["timestamp"], None, "{0}_{1}_{2}".format(o["body"]["book_id"],
+                                                                  o["body"]["time_of_event"],
+                                                                  o["body"]["aggr_seq"]["top_v2"])
 
     return None, None, None
 
@@ -121,8 +129,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                        {"full_book_event": match[0]["eventId"],
                                         "aggr_book_event": match[1]["eventId"],
                                         "book_id": match[0]["body"]["book_id"],
-                                        "limit_v": match[0]["body"]["aggr_seq"]["limit_v"],
-                                        "top_v": match[0]["body"]["aggr_seq"]["top_v"],
+                                        "time_of_event": match[0]["body"]["time_of_event"],
+                                        "limit_v2": match[0]["body"]["aggr_seq"]["limit_v2"],
                                         "errors": comp_res})
             save_events([error_event])
     elif match[0] is not None:
@@ -132,8 +140,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                    False,
                                    {"full_book_event": match[0]["eventId"],
                                     "book_id": match[0]["body"]["book_id"],
-                                    "limit_v": match[0]["body"]["aggr_seq"]["limit_v"],
-                                    "top_v": match[0]["body"]["aggr_seq"]["top_v"],
+                                    "time_of_event": match[0]["body"]["time_of_event"],
+                                    "limit_v2": match[0]["body"]["aggr_seq"]["limit_v2"],
                                     "sessionId": match[0]["body"]["sessionId"],
                                     "tech_info": tech_info})
         save_events([error_event])
@@ -143,8 +151,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                    False,
                                    {"aggr_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
-                                    "limit_v": match[1]["body"]["aggr_seq"]["limit_v"],
-                                   "top_v": match[1]["body"]["aggr_seq"]["top_v"],
+                                    "time_of_event": match[0]["body"]["time_of_event"],
+                                   "limit_v2": match[1]["body"]["aggr_seq"]["limit_v2"],
                                     "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
 
@@ -159,8 +167,8 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                        {"full_book_event": match[0]["eventId"],
                                         "top_book_event": match[1]["eventId"],
                                         "book_id": match[0]["body"]["book_id"],
-                                        "limit_v": match[0]["body"]["aggr_seq"]["limit_v"],
-                                        "top_v": match[0]["body"]["aggr_seq"]["top_v"],
+                                        "time_of_event": match[0]["body"]["time_of_event"],
+                                        "top_v2": match[0]["body"]["aggr_seq"]["top_v2"],
                                         "errors": comp_res})
             save_events([error_event])
     elif match[0] is not None:
@@ -169,8 +177,8 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                    False,
                                    {"full_book_event": match[0]["eventId"],
                                     "book_id": match[0]["body"]["book_id"],
-                                    "limit_v": match[0]["body"]["aggr_seq"]["limit_v"],
-                                    "top_v": match[0]["body"]["aggr_seq"]["top_v"],
+                                    "time_of_event": match[0]["body"]["time_of_event"],
+                                    "top_v2": match[0]["body"]["aggr_seq"]["top_v2"],
                                     "sessionId": match[0]["body"]["sessionId"]})
         save_events([error_event])
     elif match[1] is not None:
@@ -179,8 +187,8 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                    False,
                                    {"top_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
-                                    "limit_v": match[1]["body"]["aggr_seq"]["limit_v"],
-                                    "top_v": match[1]["body"]["aggr_seq"]["limit_v"],
+                                    "time_of_event": match[0]["body"]["time_of_event"],
+                                    "top_v2": match[1]["body"]["aggr_seq"]["top_v2"],
                                     "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
 
