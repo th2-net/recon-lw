@@ -389,7 +389,7 @@ def ob_trade_order(order_id: str, traded_size: int, str_time_of_event, order_boo
     if traded_size > old_size:
         return {"error": "traded size > resting size"}, []
     elif traded_size == old_size:
-        reflect_price_update_in_version(old_side, old_price, order_book)
+        reflect_price_update_in_version(old_side, old_price, str_time_of_event,order_book)
         order_book[old_side][old_price].pop(order_id)
         if len(order_book[old_side][old_price]) == 0:
             order_book[old_side].pop(old_price)
