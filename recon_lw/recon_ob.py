@@ -63,6 +63,123 @@ def flush_sequence_clear_cache(processed_len: int, sequence_cache: dict) -> None
         sequence.pop(0)
 
 
+def combine_operations(operations_list):
+    combined_operations = [[]]
+    for operation_entry in operations_list:
+        if len(combined_operations[-1]) == 0:
+            combined_operations[-1].append(operation_entry)
+        else:
+            if operation_entry[2]["messageId"] == combined_operations[-1][-1][2]["messageId"]:
+                combined_operations[-1].append(operation_entry)
+            else:
+                combined_operations.append([operation_entry])
+    return combined_operations
+
+
+def process_operations_batch(operations_batch, events, book_id ,book, check_book_rule,
+                             event_sequence, parent_event,  log_books_filter,
+                             aggregate_batch_updates):
+
+    obs = []
+    for operation, parameters, mess in operations_batch:
+        initial_book = copy.deepcopy(book)
+        initial_parameters = copy.copy(parameters)
+        parameters["order_book"] = book
+        result, log_entries = operation(**parameters)
+        if len(result) > 0:
+            result["operation"] = operation.__name__
+            result["operation_params"] = initial_parameters
+            result["initial_book"] = initial_book
+            result["book_id"] = book_id
+            update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
+                                                 event_sequence,
+                                                 ok=False,
+                                                 body=result,
+                                                 parentId=parent_event["eventId"])
+            update_event["attachedMessageIds"] = [mess["messageId"]]
+            events.append(update_event)
+        if log_entries is not None:
+            for log_book in log_entries:
+                log_book["timestamp"] = mess["timestamp"]
+                log_book["sessionId"] = mess["sessionId"]
+                log_book["book_id"] = book_id
+                log_book["operation"] = operation.__name__
+                log_book["operation_params"] = initial_parameters
+                if log_books_filter is None or log_books_filter(log_book):
+                    log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
+                                                      "OrderBook",
+                                                      event_sequence,
+                                                      ok=True,
+                                                      body=log_book,
+                                                      parentId=parent_event["eventId"])
+                    log_event["attachedMessageIds"] = [mess["messageId"]]
+                    log_event["scope"] = mess["sessionId"]
+                    obs.append(log_event)
+
+        results = check_book_rule(book, event_sequence)
+        if results is not None:
+            for r in results:
+                if not r["successful"]:
+                    r["body"]["operation_params"] = initial_parameters
+                    r["body"]["initial_book"] = initial_book
+                r["body"]["operation"] = operation.__name__
+                r["body"]["book_id"] = book_id
+                r["parentEventId"] = parent_event["eventId"]
+                r["attachedMessageIds"] = [mess["messageId"]]
+                events.append(r)
+
+    dbg_event = recon_lw.create_event("DebugEvent",
+                                      "DebugEvent",
+                                      event_sequence,
+                                      ok=True,
+                                      body={"operations": [(op[0], op[2]["messageId"]) for op in operations_batch],
+                                            "len(batch)": len(operations_batch),
+                                            "len(obs)": len(obs),
+                                            "book_id": book_id},
+                                      parentId=parent_event["eventId"])
+    dbg_event["attachedMessageIds"] = list({mess["messageId"] for mess in operations_batch})
+    events.append(dbg_event)
+
+    if len(obs) > 1 and aggregate_batch_updates:
+        same_side = all(
+            obs[i]["body"]["aggr_seq"]["affected_side"] == obs[0]["body"]["aggr_seq"]["affected_side"] for i in
+            range(1, len(obs)))
+        same_level = all(
+            obs[i]["body"]["aggr_seq"]["affected_level"] == obs[0]["body"]["aggr_seq"]["affected_level"] for i in
+            range(1, len(obs)))
+        obs[0]["body"]["debug_batch_updates"] = len(obs)
+        obs[0]["body"]["debug_same_side"] = same_side
+        obs[0]["body"]["debug_same_level"] = same_level
+
+        if same_side:
+            skip_top = 0
+            skip_aggr = 0
+            for i in range(len(obs) - 1):
+                if obs[i]["body"]["aggr_seq"]["top_delta"] == 1:
+                    skip_top += 1
+                obs[i]["body"]["aggr_seq"]["top_delta"] = 0
+                obs[i]["body"]["aggr_seq"]["top_v"] = -1
+                obs[i]["body"]["aggr_seq"]["top_v2"] = -1
+
+                if same_level:
+                    if obs[i]["body"]["aggr_seq"]["limit_delta"] == 1:
+                        skip_aggr += 1
+                    obs[i]["body"]["aggr_seq"]["limit_delta"] = 0
+                    obs[i]["body"]["aggr_seq"]["limit_v"] = -1
+                    obs[i]["body"]["aggr_seq"]["limit_v2"] = -1
+
+            obs[-1]["body"]["aggr_seq"]["top_delta"] = 1
+            obs[-1]["body"]["aggr_seq"]["top_v"] -= skip_top
+            obs[-1]["body"]["aggr_seq"]["top_v2"] -= skip_top
+
+            if same_level:
+                obs[-1]["body"]["aggr_seq"]["limit_delta"] = 1
+                obs[-1]["body"]["aggr_seq"]["limit_v"] -= skip_aggr
+                obs[-1]["body"]["aggr_seq"]["limit_v2"] -= skip_aggr
+
+    events.extend(obs)
+
+
 def process_market_data_update(mess_batch, events,  books_cache, get_book_id_func ,update_book_rule,
                                check_book_rule, event_sequence, parent_event, initial_book_params, log_books_filter,
                                aggregate_batch_updates):
@@ -94,93 +211,11 @@ def process_market_data_update(mess_batch, events,  books_cache, get_book_id_fun
             m_operations = update_book_rule(book, m)
             for op, par in m_operations:
                 operations.append((op, par, m))
-        obs = []
-        for operation, parameters, mess in operations:
-            initial_book = copy.deepcopy(book)
-            initial_parameters = copy.copy(parameters)
-            parameters["order_book"] = book
-            result, log_entries = operation(**parameters)
-            if len(result) > 0:
-                result["operation"] = operation.__name__
-                result["operation_params"] = initial_parameters
-                result["initial_book"] = initial_book
-                result["book_id"] = book_id
-                update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
-                                                     event_sequence,
-                                                     ok=False,
-                                                     body=result,
-                                                     parentId=parent_event["eventId"])
-                update_event["attachedMessageIds"] = [mess["messageId"]]
-                events.append(update_event)
-            if log_entries is not None:
-                for log_book in log_entries:
-                    log_book["timestamp"] = mess["timestamp"]
-                    log_book["sessionId"] = mess["sessionId"]
-                    log_book["book_id"] = book_id
-                    log_book["operation"] = operation.__name__
-                    log_book["operation_params"] = initial_parameters
-                    if log_books_filter is None or log_books_filter(log_book):
-                        log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
-                                                          "OrderBook",
-                                                          event_sequence,
-                                                          ok=True,
-                                                          body=log_book,
-                                                          parentId=parent_event["eventId"])
-                        log_event["attachedMessageIds"] = [mess["messageId"]]
-                        log_event["scope"] = mess["sessionId"]
-                        obs.append(log_event)
-
-            results = check_book_rule(book, event_sequence)
-            if results is not None:
-                for r in results:
-                    if not r["successful"]:
-                        r["body"]["operation_params"] = initial_parameters
-                        r["body"]["initial_book"] = initial_book
-                    r["body"]["operation"] = operation.__name__
-                    r["body"]["book_id"] = book_id
-                    r["parentEventId"] = parent_event["eventId"]
-                    r["attachedMessageIds"] = [mess["messageId"]]
-                    events.append(r)
-        
-        dbg_event = recon_lw.create_event("DebugEvent",
-                                          "DebugEvent",
-                                          event_sequence,
-                                          ok=True,
-                                          body={"operations": [(op[0], op[2]["messageId"]) for op in operations],
-                                                "len(batch)": len(mess_batch),
-                                                "len(obs)": len(obs),
-                                                "book_id": book_id},
-                                          parentId=parent_event["eventId"])
-        dbg_event["attachedMessageIds"] = list({mess["messageId"] for mess in mess_batch})
-        events.append(dbg_event)
-
-        if len(obs) >1 and aggregate_batch_updates:
-            same_side = all(obs[i]["body"]["aggr_seq"]["affected_side"] == obs[0]["body"]["aggr_seq"]["affected_side"] for i in range(1, len(obs)))
-            same_level = all(obs[i]["body"]["aggr_seq"]["affected_level"] == obs[0]["body"]["aggr_seq"]["affected_level"] for i in range(1, len(obs)))
-            obs[0]["body"]["debug_batch_updates"] = len(obs)
-            obs[0]["body"]["debug_same_side"] = same_side
-            obs[0]["body"]["debug_same_level"] = same_level
-
-            if same_side:
-                skip_top = 0
-                skip_aggr = 0
-                for i in range(len(obs)-1):
-                    if obs[i]["body"]["aggr_seq"]["top_delta"] == 1:
-                        skip_top += 1
-                    obs[i]["body"]["aggr_seq"]["top_delta"] = 0
-                    obs[i]["body"]["aggr_seq"]["top_v"] = -1
-                    if same_level:
-                        if obs[i]["body"]["aggr_seq"]["limit_delta"] == 1:
-                            skip_aggr += 1
-                        obs[i]["body"]["aggr_seq"]["limit_delta"] = 0
-                        obs[i]["body"]["aggr_seq"]["limit_v"] = -1
-                obs[-1]["body"]["aggr_seq"]["top_delta"] = 1
-                obs[-1]["body"]["aggr_seq"]["top_v"] -= skip_top
-                if same_level:
-                    obs[-1]["body"]["aggr_seq"]["limit_delta"] = 1
-                    obs[-1]["body"]["aggr_seq"]["limit_v"] -= skip_aggr
-
-        events.extend(obs)
+        operations_chunks = combine_operations(operations)
+        for chunk in operations_chunks:
+            process_operations_batch(chunk,events,book_id, book, check_book_rule,
+                                     event_sequence, parent_event, log_books_filter,
+                                     aggregate_batch_updates)
 
 
 def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book_id_func,
@@ -190,6 +225,7 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
                      log_books_filter, aggregate_batch_updates) -> int:
     events = []
     n_processed = 0
+    messages_chunk = []
     for m in sequenced_batch:
         seq = m[0]
         mess = m[1]
@@ -200,15 +236,12 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
             events.append(gap_event)
             n_processed += 1
             continue
-        chunk = message_utils.expand_message(mess)
-        process_market_data_update(chunk, events, books_cache, get_book_id_func, update_book_rule,
-                                   check_book_rule, event_sequence, parent_event, initial_book_params,
-                                   log_books_filter, aggregate_batch_updates)
-        #for m_upd in chunk:
-        #    process_market_data_update(m_upd, events, books_cache, get_book_id_func, update_book_rule,
-        #                               check_book_rule, event_sequence, parent_event, initial_book_params,
-        #                               log_books_filter, aggregate_batch_updates)
+        messages_chunk.extend(message_utils.expand_message(mess))
         n_processed += 1
+
+    process_market_data_update(messages_chunk, events, books_cache, get_book_id_func, update_book_rule,
+                               check_book_rule, event_sequence, parent_event, initial_book_params,
+                               log_books_filter, aggregate_batch_updates)
 
     send_events_func(events)
     return n_processed
