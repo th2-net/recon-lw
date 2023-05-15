@@ -295,7 +295,7 @@ def reflect_price_update_in_version(side: str, price: float,str_time_of_event,or
         else:
             order_book["time_of_event"] = str_time_of_event
             order_book["aggr_seq"]["limit_v2"] = 0
-            order_book["aggr_seq"]["limit_v2"] = 0
+            order_book["aggr_seq"]["top_v2"] = 0
 
 
 def ob_add_order(order_id: str, price: float, size: int, side: str, str_time_of_event ,order_book: dict) -> tuple:
