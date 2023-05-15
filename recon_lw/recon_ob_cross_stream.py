@@ -151,7 +151,7 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                    False,
                                    {"aggr_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
-                                    "time_of_event": match[0]["body"]["time_of_event"],
+                                    "time_of_event": match[1]["body"]["time_of_event"],
                                    "limit_v2": match[1]["body"]["aggr_seq"]["limit_v2"],
                                     "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
@@ -187,7 +187,7 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                    False,
                                    {"top_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
-                                    "time_of_event": match[0]["body"]["time_of_event"],
+                                    "time_of_event": match[1]["body"]["time_of_event"],
                                     "top_v2": match[1]["body"]["aggr_seq"]["top_v2"],
                                     "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
