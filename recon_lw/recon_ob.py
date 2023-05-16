@@ -145,10 +145,11 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
         same_side = all(
             obs[i]["body"]["aggr_seq"]["affected_side"] == obs[0]["body"]["aggr_seq"]["affected_side"] for i in
             range(1, len(obs)))
-        same_level = all(
-            obs[i]["body"]["aggr_seq"]["affected_level"] == obs[0]["body"]["aggr_seq"]["affected_level"] for i in
-            range(1, len(obs)))
-
+        #same_level = all(
+        #    obs[i]["body"]["aggr_seq"]["affected_level"] == obs[0]["body"]["aggr_seq"]["affected_level"] for i in
+        #    range(1, len(obs)))
+        #l2 is not aggregated
+        same_level = False
         if same_side and obs[0]["body"]["aggr_seq"]["affected_side"] != "na":
             skip_top = 0
             skip_aggr = 0
