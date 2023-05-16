@@ -137,7 +137,8 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                                             "len(obs)": len(obs),
                                             "book_id": book_id},
                                       parentId=parent_event["eventId"])
-    dbg_event["attachedMessageIds"] = list({mess["messageId"] for mess in operations_batch})
+    for tupl in operations_batch:
+        dbg_event["attachedMessageIds"].append(tupl[2]["messageId"])
     events.append(dbg_event)
 
     if len(obs) > 1 and aggregate_batch_updates:
