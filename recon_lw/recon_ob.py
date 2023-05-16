@@ -148,11 +148,8 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
         same_level = all(
             obs[i]["body"]["aggr_seq"]["affected_level"] == obs[0]["body"]["aggr_seq"]["affected_level"] for i in
             range(1, len(obs)))
-        obs[0]["body"]["debug_batch_updates"] = len(obs)
-        obs[0]["body"]["debug_same_side"] = same_side
-        obs[0]["body"]["debug_same_level"] = same_level
 
-        if same_side:
+        if same_side and obs[0]["body"]["aggr_seq"]["affected_side"] != "na":
             skip_top = 0
             skip_aggr = 0
             for i in range(len(obs) - 1):
@@ -162,7 +159,7 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                 obs[i]["body"]["aggr_seq"]["top_v"] = -1
                 obs[i]["body"]["aggr_seq"]["top_v2"] = -1
 
-                if same_level:
+                if same_level and obs[0]["body"]["aggr_seq"]["affected_side"] != -1:
                     if obs[i]["body"]["aggr_seq"]["limit_delta"] == 1:
                         skip_aggr += 1
                     obs[i]["body"]["aggr_seq"]["limit_delta"] = 0
@@ -173,7 +170,7 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
             obs[-1]["body"]["aggr_seq"]["top_v"] -= skip_top
             obs[-1]["body"]["aggr_seq"]["top_v2"] -= skip_top
 
-            if same_level:
+            if same_level and obs[0]["body"]["aggr_seq"]["affected_side"] != -1:
                 obs[-1]["body"]["aggr_seq"]["limit_delta"] = 1
                 obs[-1]["body"]["aggr_seq"]["limit_v"] -= skip_aggr
                 obs[-1]["body"]["aggr_seq"]["limit_v2"] -= skip_aggr
