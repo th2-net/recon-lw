@@ -58,7 +58,7 @@ def compare_full_vs_top(full_book: dict, top_book: dict):
             price_condition = top_p == top_book["ask_price"]
             num_orders_condition = (full_book["ask"][top_p]) == \
                                    (top_book["ask_impl_n_orders"] + top_book["ask_real_n_orders"])
-            size_condition = sum(full_book["ask"][top_p].values()) == (
+            size_condition = (full_book["ask"][top_p].values()) == (
                     top_book["ask_real_qty"] + top_book["ask_impl_qty"])
             if not (price_condition and num_orders_condition and size_condition):
                 problems.append({"synopsys": synopsys(price_condition, num_orders_condition, size_condition),
@@ -75,7 +75,7 @@ def compare_full_vs_top(full_book: dict, top_book: dict):
             price_condition = top_p == top_book["bid_price"]
             num_orders_condition = (full_book["bid"][top_p]) == \
                                    (top_book["bid_impl_n_orders"] + top_book["bid_real_n_orders"])
-            size_condition = sum(full_book["bid"][top_p].values()) == (
+            size_condition = (full_book["bid"][top_p].values()) == (
                     top_book["bid_real_qty"] + top_book["bid_impl_qty"])
             if not (price_condition and num_orders_condition and size_condition):
                 problems.append({"synopsys": synopsys(price_condition, num_orders_condition, size_condition),
