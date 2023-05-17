@@ -142,14 +142,16 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
     events.append(dbg_event)
 
     if len(obs) > 1 and aggregate_batch_updates:
-        same_side = all(
-            obs[i]["body"]["aggr_seq"]["affected_side"] == obs[0]["body"]["aggr_seq"]["affected_side"] for i in
-            range(1, len(obs)))
+        #same_side = all(
+        #    obs[i]["body"]["aggr_seq"]["affected_side"] == obs[0]["body"]["aggr_seq"]["affected_side"] for i in
+        #    range(1, len(obs)))
         #same_level = all(
         #    obs[i]["body"]["aggr_seq"]["affected_level"] == obs[0]["body"]["aggr_seq"]["affected_level"] for i in
         #    range(1, len(obs)))
         #l2 is not aggregated
+        #l1 is always aggregated regardless of side
         same_level = False
+        same_side = True
         if same_side and obs[0]["body"]["aggr_seq"]["affected_side"] != "na":
             skip_top = 0
             skip_aggr = 0
