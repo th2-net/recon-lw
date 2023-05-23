@@ -31,21 +31,25 @@ class TimeCacheMatcher:
                     self._match_index[key1] = [o, None]
                     self._time_index.add([ts, key1])
                     if self._debug:
-                        self.debug({"event": "key1 added", "key": key1, "ts": ts})
+                        self.debug({"processor": self._get_timestamp_key1_key2.__name__, "event": "key1 added",
+                                    "key": key1, "ts": ts})
                 else:
                     self._match_index[key1][0] = o
                     if self._debug:
-                        self.debug({"event": "key1 updated", "key": key1, "ts": ts})
+                        self.debug({"processor": self._get_timestamp_key1_key2.__name__, "event": "key1 updated",
+                                    "key": key1, "ts": ts})
             elif key2 is not None:
                 if key2 not in self._match_index:
                     self._match_index[key2] = [None, o]
                     self._time_index.add([ts, key2])
                     if self._debug:
-                        self.debug({"event": "key2 added", "key": key2, "ts": ts})
+                        self.debug({"processor": self._get_timestamp_key1_key2.__name__,"event": "key2 added",
+                                    "key": key2, "ts": ts})
                 else:
                     self._match_index[key2][1] = o
                     if self._debug:
-                        self.debug({"event": "key2 updated", "key": key2, "ts": ts})
+                        self.debug({"processor": self._get_timestamp_key1_key2.__name__, "event": "key2 updated",
+                                    "key": key2, "ts": ts})
 
         if stream_time is not None:
             edge_timestamp = {"epochSecond": stream_time["epochSecond"] - self._horizon_delay_seconds,
@@ -57,12 +61,14 @@ class TimeCacheMatcher:
                     match = self._match_index.pop(nxt[1])
                     self._interpret_func(match, self._custom_settings, self._create_event, self._send_events)
                     if self._debug:
-                        self.debug({"event": "key processed", "key": nxt, "ts": stream_time})
+                        self.debug({"processor": self._get_timestamp_key1_key2.__name__, "event": "key processed",
+                                    "key": nxt, "ts": stream_time})
 
     def flush_all(self) -> None:
         self._time_index.clear()
         for key, match in self._match_index.items():
             self._interpret_func(match, self._custom_settings, self._create_event, self._send_events)
             if self._debug:
-                self.debug({"event": "key processed at the end", "key": key, "ts": None})
+                self.debug({"processor": self._get_timestamp_key1_key2.__name__, "event": "key processed at the end",
+                            "key": key, "ts": None})
         self._match_index.clear()
