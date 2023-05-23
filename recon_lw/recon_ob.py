@@ -69,7 +69,8 @@ def combine_operations(operations_list):
         if len(combined_operations[-1]) == 0:
             combined_operations[-1].append(operation_entry)
         else:
-            if operation_entry[2]["messageId"] == combined_operations[-1][-1][2]["messageId"]:
+            #if operation_entry[2]["messageId"] == combined_operations[-1][-1][2]["messageId"]:
+            if operation_entry[1]["str_time_of_event"] == combined_operations[-1][-1][1]["str_time_of_event"]:
                 combined_operations[-1].append(operation_entry)
             else:
                 combined_operations.append([operation_entry])
