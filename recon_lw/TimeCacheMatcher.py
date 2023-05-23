@@ -16,7 +16,7 @@ class TimeCacheMatcher:
         self._debug = True
 
     def debug(self, body):
-        ev = self._create_event("TCMDebug", "TCMDebug", True, message_dict)
+        ev = self._create_event("TCMDebug", "TCMDebug", True, body)
         self._send_events([ev])
 
     def process_objects_batch(self, batch: list) -> None:
