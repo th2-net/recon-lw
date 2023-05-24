@@ -78,7 +78,7 @@ def combine_operations(operations_list):
 
 
 def process_operations_batch(operations_batch, events, book_id ,book, check_book_rule,
-                             event_sequence, parent_event,  log_books_filter,
+                             event_sequence, parent_event,  log_books_filter, log_books_collection,
                              aggregate_batch_updates):
 
     obs = []
@@ -106,16 +106,18 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                 log_book["book_id"] = book_id
                 log_book["operation"] = operation.__name__
                 log_book["operation_params"] = initial_parameters
+                log_book["source_msg_id"] = mess["messageId"]
                 if log_books_filter is None or log_books_filter(log_book):
-                    log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
-                                                      "OrderBook",
-                                                      event_sequence,
-                                                      ok=True,
-                                                      body=log_book,
-                                                      parentId=parent_event["eventId"])
-                    log_event["attachedMessageIds"] = [mess["messageId"]]
-                    log_event["scope"] = mess["sessionId"]
-                    obs.append(log_event)
+                    log_books_collection.append(log_book)
+                #    log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
+                #                                      "OrderBook",
+                #                                      event_sequence,
+                #                                      ok=True,
+                #                                      body=log_book,
+                #                                      parentId=parent_event["eventId"])
+                #    log_event["attachedMessageIds"] = [mess["messageId"]]
+                #    log_event["scope"] = mess["sessionId"]
+                #    obs.append(log_event)
 
         results = check_book_rule(book, event_sequence)
         if results is not None:
@@ -184,7 +186,7 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
 
 def process_market_data_update(mess_batch, events,  books_cache, get_book_id_func ,update_book_rule,
                                check_book_rule, event_sequence, parent_event, initial_book_params, log_books_filter,
-                               aggregate_batch_updates):
+                               log_books_collection, aggregate_batch_updates):
     books_updates = {}
     for m in mess_batch:
         book_ids_list, result = get_book_id_func(m)
@@ -217,6 +219,7 @@ def process_market_data_update(mess_batch, events,  books_cache, get_book_id_fun
         for chunk in operations_chunks:
             process_operations_batch(chunk,events,book_id, book, check_book_rule,
                                      event_sequence, parent_event, log_books_filter,
+                                     log_books_collection,
                                      aggregate_batch_updates)
 
 
@@ -228,6 +231,7 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
     events = []
     n_processed = 0
     messages_chunk = []
+    log_books_collection = []
     for m in sequenced_batch:
         seq = m[0]
         mess = m[1]
@@ -243,7 +247,19 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
 
     process_market_data_update(messages_chunk, events, books_cache, get_book_id_func, update_book_rule,
                                check_book_rule, event_sequence, parent_event, initial_book_params,
-                               log_books_filter, aggregate_batch_updates)
+                               log_books_filter,log_books_collection, aggregate_batch_updates)
+
+    log_books_collection.sort(key=lambda d: recon_lw.time_stamp_key(d["timestamp"]))
+    for log_book in log_books_collection:
+        log_event = recon_lw.create_event("OrderBook:" + log_book["sessionId"],
+                                          "OrderBook",
+                                          event_sequence,
+                                          ok=True,
+                                          body=log_book,
+                                          parentId=parent_event["eventId"])
+        log_event["attachedMessageIds"] = [log_book["source_msg_id"]]
+        log_event["scope"] = log_book["sessionId"]
+        events.append(log_event)
 
     send_events_func(events)
     return n_processed
