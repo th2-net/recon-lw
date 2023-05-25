@@ -167,7 +167,7 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
 
         obs[-1]["aggr_seq"]["top_delta"] = 1
         obs[-1]["aggr_seq"]["top_v"] -= skip_top
-        obs[-1]["aggr_seq"]["top_v2"] -= skip_top
+        obs[-1]["aggr_seq"]["top_v2"] = 0
 
 
 def process_market_data_update(mess_batch, events,  books_cache, get_book_id_func ,update_book_rule,
