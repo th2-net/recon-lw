@@ -86,7 +86,7 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                                           event_sequence,
                                           ok=False,
                                           body={"book_id": book_id,
-                                                "operations": [elem[0] for elem in operations_batch],
+                                                "operations": [elem[0].__name__ for elem in operations_batch],
                                                 "times": [elem[1]["str_time_of_event"] for elem in operations_batch]},
                                           parentId=parent_event["eventId"])
     events.append(debug_event)
