@@ -82,6 +82,15 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                              aggregate_batch_updates):
 
     obs = []
+    debug_event = recon_lw.create_event("ROBDebug:" + parent_event["eventName"], "ROBDebug",
+                                          event_sequence,
+                                          ok=False,
+                                          body={"book_id": book_id,
+                                                "operations": [elem[0] for elem in operations_batch],
+                                                "times": [elem[1]["str_time_of_event"] for elem in operations_batch]},
+                                          parentId=parent_event["eventId"])
+    events.append(debug_event)
+
     for operation, parameters, mess in operations_batch:
         initial_book = copy.deepcopy(book)
         initial_parameters = copy.copy(parameters)
