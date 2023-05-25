@@ -157,15 +157,15 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
     if len(obs) > 1 and aggregate_batch_updates:
         skip_top = 0
         for i in range(len(obs) - 1):
-            if obs[i]["body"]["aggr_seq"]["top_delta"] == 1:
+            if obs[i]["aggr_seq"]["top_delta"] == 1:
                 skip_top += 1
-            obs[i]["body"]["aggr_seq"]["top_delta"] = 0
-            obs[i]["body"]["aggr_seq"]["top_v"] = -1
-            obs[i]["body"]["aggr_seq"]["top_v2"] = -1
+            obs[i]["aggr_seq"]["top_delta"] = 0
+            obs[i]["aggr_seq"]["top_v"] = -1
+            obs[i]["aggr_seq"]["top_v2"] = -1
 
-        obs[-1]["body"]["aggr_seq"]["top_delta"] = 1
-        obs[-1]["body"]["aggr_seq"]["top_v"] -= skip_top
-        obs[-1]["body"]["aggr_seq"]["top_v2"] -= skip_top
+        obs[-1]["aggr_seq"]["top_delta"] = 1
+        obs[-1]["aggr_seq"]["top_v"] -= skip_top
+        obs[-1]["aggr_seq"]["top_v2"] -= skip_top
 
 
 def process_market_data_update(mess_batch, events,  books_cache, get_book_id_func ,update_book_rule,
