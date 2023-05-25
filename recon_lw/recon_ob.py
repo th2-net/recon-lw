@@ -118,6 +118,7 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                 log_book["source_msg_id"] = mess["messageId"]
                 if log_books_filter is None or log_books_filter(log_book):
                     log_books_collection.append(log_book)
+                    obs.append(log_book)
                 #    log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
                 #                                      "OrderBook",
                 #                                      event_sequence,
@@ -154,43 +155,17 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
     events.append(dbg_event)
 
     if len(obs) > 1 and aggregate_batch_updates:
-        #same_side = all(
-        #    obs[i]["body"]["aggr_seq"]["affected_side"] == obs[0]["body"]["aggr_seq"]["affected_side"] for i in
-        #    range(1, len(obs)))
-        #same_level = all(
-        #    obs[i]["body"]["aggr_seq"]["affected_level"] == obs[0]["body"]["aggr_seq"]["affected_level"] for i in
-        #    range(1, len(obs)))
-        #l2 is not aggregated
-        #l1 is always aggregated regardless of side
-        same_level = False
-        same_side = True
-        if same_side and obs[0]["body"]["aggr_seq"]["affected_side"] != "na":
-            skip_top = 0
-            skip_aggr = 0
-            for i in range(len(obs) - 1):
-                if obs[i]["body"]["aggr_seq"]["top_delta"] == 1:
-                    skip_top += 1
-                obs[i]["body"]["aggr_seq"]["top_delta"] = 0
-                obs[i]["body"]["aggr_seq"]["top_v"] = -1
-                obs[i]["body"]["aggr_seq"]["top_v2"] = -1
+        skip_top = 0
+        for i in range(len(obs) - 1):
+            if obs[i]["body"]["aggr_seq"]["top_delta"] == 1:
+                skip_top += 1
+            obs[i]["body"]["aggr_seq"]["top_delta"] = 0
+            obs[i]["body"]["aggr_seq"]["top_v"] = -1
+            obs[i]["body"]["aggr_seq"]["top_v2"] = -1
 
-                if same_level and obs[0]["body"]["aggr_seq"]["affected_side"] != -1:
-                    if obs[i]["body"]["aggr_seq"]["limit_delta"] == 1:
-                        skip_aggr += 1
-                    obs[i]["body"]["aggr_seq"]["limit_delta"] = 0
-                    obs[i]["body"]["aggr_seq"]["limit_v"] = -1
-                    obs[i]["body"]["aggr_seq"]["limit_v2"] = -1
-
-            obs[-1]["body"]["aggr_seq"]["top_delta"] = 1
-            obs[-1]["body"]["aggr_seq"]["top_v"] -= skip_top
-            obs[-1]["body"]["aggr_seq"]["top_v2"] -= skip_top
-
-            if same_level and obs[0]["body"]["aggr_seq"]["affected_side"] != -1:
-                obs[-1]["body"]["aggr_seq"]["limit_delta"] = 1
-                obs[-1]["body"]["aggr_seq"]["limit_v"] -= skip_aggr
-                obs[-1]["body"]["aggr_seq"]["limit_v2"] -= skip_aggr
-
-    events.extend(obs)
+        obs[-1]["body"]["aggr_seq"]["top_delta"] = 1
+        obs[-1]["body"]["aggr_seq"]["top_v"] -= skip_top
+        obs[-1]["body"]["aggr_seq"]["top_v2"] -= skip_top
 
 
 def process_market_data_update(mess_batch, events,  books_cache, get_book_id_func ,update_book_rule,
