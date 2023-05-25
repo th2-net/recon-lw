@@ -13,7 +13,7 @@ class TimeCacheMatcher:
         self._send_events = send_events
         self._horizon_delay_seconds = horizon_delay_seconds
         self._custom_settings = custom_settings
-        self._debug = False
+        self._debug = True
 
     def debug(self, body):
         ev = self._create_event("TCMDebug", "TCMDebug", True, body)
