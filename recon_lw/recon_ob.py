@@ -155,8 +155,8 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
     events.append(dbg_event)
 
     if len(obs) > 1 and aggregate_batch_updates:
-        top_not_affected = all(ob["top_delta"] == 0 for ob in obs)
-        limit_not_affected = all(ob["limit_delta"] == 0 for ob in obs)
+        top_not_affected = all(ob["aggr_seq"]["top_delta"] == 0 for ob in obs)
+        limit_not_affected = all(ob["aggr_seq"]["limit_delta"] == 0 for ob in obs)
         skip_top = 0
         for i in range(len(obs) - 1):
             if obs[i]["operation"] in ["ob_change_status", "ob_clean_book", "ob_aggr_clean_book", "ob_top_clean_book"]:
