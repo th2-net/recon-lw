@@ -146,8 +146,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                     "tech_info": tech_info})
         save_events([error_event])
     elif match[1] is not None:
-        error_event = create_event("StreamMismatchNoFull",
-                                   "StreamMismatchNoFull",
+        error_event = create_event("StreamMismatchNoFullvsAggr",
+                                   "StreamMismatchNoFullvsAggr",
                                    False,
                                    {"aggr_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
@@ -182,8 +182,8 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                     "sessionId": match[0]["body"]["sessionId"]})
         save_events([error_event])
     elif match[1] is not None:
-        error_event = create_event("StreamMismatchNoFull",
-                                   "StreamMismatchNoFull",
+        error_event = create_event("StreamMismatchNoFullvsTop",
+                                   "StreamMismatchNoFullvsTop",
                                    False,
                                    {"top_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
