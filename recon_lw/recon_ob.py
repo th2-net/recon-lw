@@ -537,6 +537,9 @@ def ob_aggr_add_level(side: str, level: int, price: float, real_qty: int, real_n
     else:
         reset_aggr_seq(order_book)
 
+    #is it purely implied
+    order_book["implied_only"] = (real_num_orders == 0)
+
     result_body = {}
     max_levels = order_book["aggr_max_levels"]
     side_key = side + "_aggr"
@@ -570,6 +573,9 @@ def ob_aggr_delete_level(side: str, level: int, str_time_of_event, order_book: d
         result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
         return result_body, []
 
+    #is it purely implied
+    order_book["implied_only"] = (order_book[side_key]["real_num_orders"] == 0)
+
     order_book[side_key].pop(del_index)
 
     update_time_and_version(str_time_of_event, order_book)
@@ -593,6 +599,11 @@ def ob_aggr_update_level(side: str, level: int, price: float, real_qty: int, rea
     if not 0 <= update_index < len(order_book[side_key]):
         result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
         return result_body, []
+
+    #is it purely implied
+    order_book["implied_only"] = (order_book[side_key]["real_num_orders"] == real_num_orders) and \
+                                 (order_book[side_key]["real_qty"] == real_qty)
+
 
     upd_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders,
                  "impl_qty": impl_qty, "impl_num_orders": impl_num_orders}
@@ -650,6 +661,35 @@ def ob_top_update(ask_price: str, ask_real_qty: str, ask_impl_qty: str, ask_real
         init_aggr_seq(order_book)
     else:
         reset_aggr_seq(order_book)
+
+    #is it purely implied
+    sell_implieds_only = False
+    if float(ask_price) == float(order_book["ask_price"]):
+        if ask_real_n_orders == order_book["ask_real_n_orders"]:
+            sell_implieds_only = True
+    if float(ask_price) > float(order_book["ask_price"]):
+        if ask_impl_n_orders != "0" and \
+                ask_real_n_orders == "0":
+            sell_implieds_only = True
+    if float(ask_price) < float(order_book["ask_price"]):
+        if order_book["ask_impl_n_orders"] != "0" and \
+                order_book["ask_real_n_orders"] == "0":
+            sell_implieds_only = True
+
+    buy_implieds_only = False
+    if float(bid_price) == float(order_book["bid_price"]):
+        if bid_real_n_orders == order_book["bid_real_n_orders"]:
+            buy_implieds_only = True
+    if float(bid_price) < float(order_book["bid_price"]):
+        if bid_impl_n_orders != "0" and \
+                bid_real_n_orders == "0":
+            buy_implieds_only = True
+    if float(bid_price) < float(order_book["bid_price"]):
+        if order_book["bid_impl_n_orders"] != "0" and \
+                order_book["bid_real_n_orders"] == "0":
+            buy_implieds_only = True
+    order_book["implied_only"] = sell_implieds_only and buy_implieds_only
+
 
     order_book["ask_price"] = ask_price
     order_book["ask_real_qty"] = ask_real_qty

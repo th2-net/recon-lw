@@ -26,14 +26,14 @@ def compare_full_vs_aggr(full_book: dict, aggr_book: dict) -> list:
             full_levels.sort()
         else:
             full_levels.sort(reverse=True)
-        aggr_levels = aggr_book[side + "_aggr"]
+        aggr_levels = [level for level in aggr_book[side + "_aggr"] if level["real_num_orders"] != "0"]
         for i in range(aggr_book["aggr_max_levels"]):
             if i < len(full_levels) and i < len(aggr_levels):
                 price_condition = full_levels[i] == aggr_levels[i]["price"]
                 num_orders_condition = len(full_book[side][full_levels[i]]) == \
-                                       (aggr_levels[i]["real_num_orders"] + aggr_levels[i]["impl_num_orders"])
+                                       (aggr_levels[i]["real_num_orders"])
                 size_condition = sum(full_book[side][full_levels[i]].values()) == \
-                                 (aggr_levels[i]["real_qty"] + aggr_levels[i]["impl_qty"])
+                                 (aggr_levels[i]["real_qty"])
                 if not (price_condition and num_orders_condition and size_condition):
                     problems.append({"synopsys": synopsys(price_condition, num_orders_condition, size_condition),
                                      "side": side,
@@ -51,37 +51,35 @@ def compare_full_vs_aggr(full_book: dict, aggr_book: dict) -> list:
 def compare_full_vs_top(full_book: dict, top_book: dict):
     problems = []
     if len(full_book["ask"]) > 0:
-        if top_book["ask_real_qty"] == 0 and top_book["ask_impl_qty"] == 0:
+        if top_book["ask_real_qty"] == 0:
             problems.append({"synopsys": "top_miss_level", "side": "ask"})
         else:
             top_p = min(full_book["ask"].keys())
             price_condition = top_p == top_book["ask_price"]
             num_orders_condition = len(full_book["ask"][top_p]) == \
-                                   (top_book["ask_impl_n_orders"] + top_book["ask_real_n_orders"])
-            size_condition = sum(full_book["ask"][top_p].values()) == (
-                    top_book["ask_real_qty"] + top_book["ask_impl_qty"])
+                                   (top_book["ask_real_n_orders"])
+            size_condition = sum(full_book["ask"][top_p].values()) == (top_book["ask_real_qty"])
             if not (price_condition and num_orders_condition and size_condition):
                 problems.append({"synopsys": synopsys(price_condition, num_orders_condition, size_condition),
                                  "side": "ask"})
     else:
-        if top_book["ask_real_qty"] != 0 or top_book["ask_impl_qty"] != 0:
+        if top_book["ask_real_qty"] != 0:
             problems.append({"synopsys": "full_miss_level", "side": "ask"})
 
     if len(full_book["bid"]) > 0:
-        if top_book["bid_real_qty"] == 0 and top_book["bid_impl_qty"] == 0:
+        if top_book["bid_real_qty"] == 0:
             problems.append({"synopsys": "top_miss_level", "side": "bid"})
         else:
             top_p = max(full_book["bid"].keys())
             price_condition = top_p == top_book["bid_price"]
             num_orders_condition = len(full_book["bid"][top_p]) == \
-                                   (top_book["bid_impl_n_orders"] + top_book["bid_real_n_orders"])
-            size_condition = sum(full_book["bid"][top_p].values()) == (
-                    top_book["bid_real_qty"] + top_book["bid_impl_qty"])
+                                   (top_book["bid_real_n_orders"])
+            size_condition = sum(full_book["bid"][top_p].values()) == (top_book["bid_real_qty"])
             if not (price_condition and num_orders_condition and size_condition):
                 problems.append({"synopsys": synopsys(price_condition, num_orders_condition, size_condition),
                                  "side": "bid"})
     else:
-        if top_book["bid_real_qty"] != 0 or top_book["bid_impl_qty"] != 0:
+        if top_book["bid_real_qty"] != 0:
             problems.append({"synopsys": "full_miss_level", "side": "bid"})
     return problems
 
@@ -95,6 +93,8 @@ def ob_compare_get_timestamp_key1_key2_aggr(o, custom_settings):
                                                             o["body"]["aggr_seq"]["limit_v2"]), None
 
     if o["body"]["sessionId"] == custom_settings["comp_session"]:
+        if "implied_only" in o["body"] and o["body"]["implied_only"]:
+            return None, None, None
         return o["body"]["timestamp"], None, "{0}_{1}_{2}".format(o["body"]["book_id"],
                                                                   o["body"]["time_of_event"],
                                                                   o["body"]["aggr_seq"]["limit_v2"])
@@ -112,6 +112,8 @@ def ob_compare_get_timestamp_key1_key2_top(o, custom_settings):
                                                             o["body"]["aggr_seq"]["top_v2"]), None
 
     if o["body"]["sessionId"] == custom_settings["comp_session"]:
+        if "implied_only" in o["body"] and o["body"]["implied_only"]:
+            return None, None, None
         return o["body"]["timestamp"], None, "{0}_{1}_{2}".format(o["body"]["book_id"],
                                                                   o["body"]["time_of_event"],
                                                                   o["body"]["aggr_seq"]["top_v2"])
