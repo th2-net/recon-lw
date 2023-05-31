@@ -140,6 +140,9 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                 r["parentEventId"] = parent_event["eventId"]
                 r["attachedMessageIds"] = [mess["messageId"]]
                 events.append(r)
+        book["last_operation"] = operation.__name__
+        book["last_params"] = initial_parameters
+
 
     dbg_event = recon_lw.create_event("DebugEvent",
                                       "DebugEvent",
@@ -311,10 +314,12 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
 
 def init_aggr_seq(order_book: dict) -> None:
     order_book["aggr_seq"] = {"top_v": 0, "top_delta": 0, "limit_v": 0, "limit_delta": 0, "limit_v2" : 0, "top_v2" : 0, "affected_side": "na", "affected_level": -1}
+    order_book["implied_only"] = False
 
 
 def reset_aggr_seq(order_book):
     order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0, "affected_side": "na", "affected_level": -1})
+    order_book["implied_only"] = False
 
 
 def reflect_price_update_in_version(side: str, price: float,str_time_of_event,order_book: dict):
@@ -574,7 +579,7 @@ def ob_aggr_delete_level(side: str, level: int, str_time_of_event, order_book: d
         return result_body, []
 
     #is it purely implied
-    order_book["implied_only"] = (order_book[side_key]["real_num_orders"] == 0)
+    order_book["implied_only"] = (order_book[side_key][del_index]["real_num_orders"] == 0)
 
     order_book[side_key].pop(del_index)
 
@@ -601,8 +606,8 @@ def ob_aggr_update_level(side: str, level: int, price: float, real_qty: int, rea
         return result_body, []
 
     #is it purely implied
-    order_book["implied_only"] = (order_book[side_key]["real_num_orders"] == real_num_orders) and \
-                                 (order_book[side_key]["real_qty"] == real_qty)
+    order_book["implied_only"] = (order_book[side_key][update_index]["real_num_orders"] == real_num_orders) and \
+                                 (order_book[side_key][update_index]["real_qty"] == real_qty)
 
 
     upd_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders,
@@ -654,8 +659,45 @@ def ob_top_clean_book(str_time_of_event, order_book: dict) -> tuple:
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_top_update(ask_price: str, ask_real_qty: str, ask_impl_qty: str, ask_real_n_orders: str, ask_impl_n_orders: str,
-                  bid_price: int, bid_real_qty: str, bid_impl_qty: str, bid_real_n_orders: int, bid_impl_n_orders: str,
+def ob_indicative_market_data_trade(trade_price: float, str_time_of_event, order_book: dict):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    else:
+        reset_aggr_seq(order_book)
+
+    order_book["last_price"] = trade_price
+    if trade_price > order_book["max_price"]:
+        order_book["max_price"] = trade_price
+    if trade_price < order_book["min_price"]:
+        order_book["min_price"] = trade_price
+
+    update_time_and_version(str_time_of_event, order_book)
+    order_book["aggr_seq"]["top_delta"] = 0
+    order_book["aggr_seq"]["limit_delta"] = 0
+
+    return {}, [copy.deepcopy(order_book)]
+
+
+def ob_indicative_open_price(opening_price: float, str_time_of_event, order_book: dict):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    else:
+        reset_aggr_seq(order_book)
+
+    order_book["open_price"] = opening_price
+    order_book["last_price"] = opening_price
+    order_book["max_price"] = opening_price
+    order_book["min_price"] = opening_price
+
+    update_time_and_version(str_time_of_event, order_book)
+    order_book["aggr_seq"]["top_delta"] = 0
+    order_book["aggr_seq"]["limit_delta"] = 0
+
+    return {}, [copy.deepcopy(order_book)]
+
+
+def ob_top_update(ask_price: float, ask_real_qty: int, ask_impl_qty: int, ask_real_n_orders: int, ask_impl_n_orders: int,
+                  bid_price: float, bid_real_qty: int, bid_impl_qty: int, bid_real_n_orders: int, bid_impl_n_orders: int,
                   str_time_of_event, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
@@ -664,32 +706,31 @@ def ob_top_update(ask_price: str, ask_real_qty: str, ask_impl_qty: str, ask_real
 
     #is it purely implied
     sell_implieds_only = False
-    if float(ask_price) == float(order_book["ask_price"]):
+    if ask_price == order_book["ask_price"]:
         if ask_real_n_orders == order_book["ask_real_n_orders"]:
             sell_implieds_only = True
-    if float(ask_price) > float(order_book["ask_price"]):
-        if ask_impl_n_orders != "0" and \
-                ask_real_n_orders == "0":
+    if ask_price > order_book["ask_price"]:
+        if ask_impl_n_orders != 0 and \
+                ask_real_n_orders == 0:
             sell_implieds_only = True
-    if float(ask_price) < float(order_book["ask_price"]):
-        if order_book["ask_impl_n_orders"] != "0" and \
-                order_book["ask_real_n_orders"] == "0":
+    if ask_price < order_book["ask_price"]:
+        if order_book["ask_impl_n_orders"] != 0 and \
+                order_book["ask_real_n_orders"] == 0:
             sell_implieds_only = True
 
     buy_implieds_only = False
-    if float(bid_price) == float(order_book["bid_price"]):
+    if bid_price == order_book["bid_price"]:
         if bid_real_n_orders == order_book["bid_real_n_orders"]:
             buy_implieds_only = True
-    if float(bid_price) < float(order_book["bid_price"]):
-        if bid_impl_n_orders != "0" and \
-                bid_real_n_orders == "0":
+    if bid_price < order_book["bid_price"]:
+        if bid_impl_n_orders != 0 and \
+                bid_real_n_orders == 0:
             buy_implieds_only = True
-    if float(bid_price) < float(order_book["bid_price"]):
-        if order_book["bid_impl_n_orders"] != "0" and \
-                order_book["bid_real_n_orders"] == "0":
+    if bid_price < order_book["bid_price"]:
+        if order_book["bid_impl_n_orders"] != 0 and \
+                order_book["bid_real_n_orders"] == 0:
             buy_implieds_only = True
     order_book["implied_only"] = sell_implieds_only and buy_implieds_only
-
 
     order_book["ask_price"] = ask_price
     order_book["ask_real_qty"] = ask_real_qty
