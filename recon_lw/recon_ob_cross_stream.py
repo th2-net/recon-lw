@@ -48,6 +48,52 @@ def compare_full_vs_aggr(full_book: dict, aggr_book: dict) -> list:
     return problems
 
 
+def compare_aggr_vs_top(aggr_book: dict, top_book: dict):
+    problems = []
+    if len(aggr_book["ask_aggr"]) > 0:
+        if top_book["ask_real_qty"] == 0 and top_book["ask_impl_qty"] == 0:
+            problems.append({"synopsys": "top_miss_level", "side": "ask"})
+        else:
+            price_condition = aggr_book["ask_aggr"][0]["price"] == top_book["ask_price"]
+            num_orders_condition1 = (aggr_book["ask_aggr"][0]["real_num_orders"]) == \
+                                    (top_book["ask_real_n_orders"])
+            num_orders_condition2 = (aggr_book["ask_aggr"][0]["impl_num_orders"]) == \
+                                    (top_book["ask_impl_n_orders"])
+            size_condition1 = aggr_book["ask_aggr"][0]["real_qty"] == (top_book["ask_real_qty"])
+            size_condition2 = aggr_book["ask_aggr"][0]["impl_qty"] == (top_book["ask_impl_qty"])
+            if not (price_condition and num_orders_condition1
+                    and num_orders_condition2 and size_condition1 and size_condition2):
+                problems.append({"synopsys": synopsys(price_condition,
+                                                      num_orders_condition1 and num_orders_condition2,
+                                                      size_condition1 and size_condition2),
+                                 "side": "ask"})
+    else:
+        if top_book["ask_real_qty"] != 0 or top_book["ask_impl_qty"] != 0:
+            problems.append({"synopsys": "aggr_miss_level", "side": "ask"})
+
+    if len(aggr_book["bid_aggr"]) > 0:
+        if top_book["bid_real_qty"] == 0 and top_book["bid_impl_qty"] == 0:
+            problems.append({"synopsys": "top_miss_level", "side": "bid"})
+        else:
+            price_condition = aggr_book["bid_aggr"][0]["price"] == top_book["bid_price"]
+            num_orders_condition1 = (aggr_book["bid_aggr"][0]["real_num_orders"]) == \
+                                    (top_book["bid_real_n_orders"])
+            num_orders_condition2 = (aggr_book["bid_aggr"][0]["impl_num_orders"]) == \
+                                    (top_book["bid_impl_n_orders"])
+            size_condition1 = aggr_book["bid_aggr"][0]["real_qty"] == (top_book["bid_real_qty"])
+            size_condition2 = aggr_book["bid_aggr"][0]["impl_qty"] == (top_book["bid_impl_qty"])
+            if not (price_condition and num_orders_condition1
+                    and num_orders_condition2 and size_condition1 and size_condition2):
+                problems.append({"synopsys": synopsys(price_condition,
+                                                      num_orders_condition1 and num_orders_condition2,
+                                                      size_condition1 and size_condition2),
+                                 "side": "bid"})
+    else:
+        if top_book["bid_real_qty"] != 0 or top_book["bid_impl_qty"] != 0:
+            problems.append({"synopsys": "full_miss_level", "side": "bid"})
+    return problems
+
+
 def compare_full_vs_top(full_book: dict, top_book: dict):
     problems = []
     if len(full_book["ask"]) > 0:
@@ -117,6 +163,23 @@ def ob_compare_get_timestamp_key1_key2_top(o, custom_settings):
         return o["body"]["timestamp"], None, "{0}_{1}_{2}".format(o["body"]["book_id"],
                                                                   o["body"]["time_of_event"],
                                                                   o["body"]["aggr_seq"]["top_v2"])
+
+    return None, None, None
+
+
+def ob_compare_get_timestamp_key1_key2_top_aggr(o, custom_settings):
+    if o["body"]["aggr_seq"]["top_delta"] not in [1, 2]:
+        return None, None, None
+
+    if o["body"]["sessionId"] == custom_settings["top_session"]:
+        return o["body"]["timestamp"], "{0}_{1}_{2}".format(o["body"]["book_id"],
+                                                            o["body"]["time_of_event"],
+                                                            o["body"]["aggr_seq"]["top_v2"]), None
+
+    if o["body"]["sessionId"] == custom_settings["aggr_session"]:
+        return o["body"]["timestamp"], None, "{0}_{1}_{2}".format(o["body"]["book_id"],
+                                                                  o["body"]["time_of_event"],
+                                                                  o["body"]["aggr_seq"]["limit_v2"])
 
     return None, None, None
 
@@ -195,6 +258,42 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
         save_events([error_event])
 
 
+def ob_compare_interpret_match_top_aggr(match, custom_settings, create_event, save_events):
+    if match[0] is not None and match[1] is not None:
+        comp_res = compare_aggr_vs_top(match[1]["body"], match[0]["body"])
+        if len(comp_res) > 0:
+            error_event = create_event("StreamMismatchTopAggr",
+                                       "StreamMismatchTopAggr",
+                                       False,
+                                       {"top_book_event": match[0]["eventId"],
+                                        "aggr_book_event": match[1]["eventId"],
+                                        "book_id": match[0]["body"]["book_id"],
+                                        "time_of_event": match[0]["body"]["time_of_event"],
+                                        "top_v2": match[0]["body"]["aggr_seq"]["top_v2"],
+                                        "errors": comp_res})
+            save_events([error_event])
+    elif match[0] is not None:
+        error_event = create_event("StreamMismatchNoAggrVsTop",
+                                   "StreamMismatchNoAggrVsTop",
+                                   False,
+                                   {"top_book_event": match[0]["eventId"],
+                                    "book_id": match[0]["body"]["book_id"],
+                                    "time_of_event": match[0]["body"]["time_of_event"],
+                                    "top_v2": match[0]["body"]["aggr_seq"]["top_v2"],
+                                    "sessionId": match[0]["body"]["sessionId"]})
+        save_events([error_event])
+    elif match[1] is not None:
+        error_event = create_event("StreamMismatchNoTopVsAggr",
+                                   "StreamMismatchNoTopVsAggr",
+                                   False,
+                                   {"aggr_book_event": match[1]["eventId"],
+                                    "book_id": match[1]["body"]["book_id"],
+                                    "time_of_event": match[1]["body"]["time_of_event"],
+                                    "limit_v2": match[1]["body"]["aggr_seq"]["limit_v2"],
+                                    "sessionId": match[1]["body"]["sessionId"]})
+        save_events([error_event])
+
+
 def split_every(n, data):
     iterable = iter(data)
     while 1:
@@ -239,6 +338,20 @@ def ob_compare_streams(source_events_path: pathlib.PosixPath, results_path: path
                 lambda ev_batch: events_saver.save_events(ev_batch)
             )
             processors.append(processor_top)
+        if "top_session" in rule_params and "aggr_session" in rule_params:
+            aggr_session = rule_params["aggr_session"]
+            top_session = rule_params["top_session"]
+            processor_top_aggr = TimeCacheMatcher(
+                rule_params["horizon_delay"],
+                ob_compare_get_timestamp_key1_key2_top_aggr,
+                ob_compare_interpret_match_top_aggr,
+                {"top_session": top_session, "aggr_session": aggr_session},
+                lambda name, ev_type, ok, body: events_saver.create_event(
+                    name, ev_type, ok, body, parentId=rule_root_event["eventId"]),
+                lambda ev_batch: events_saver.save_events(ev_batch)
+            )
+            processors.append(processor_top_aggr)
+
 
     # order_books_events = source_events.filter(lambda e: e["eventType"] == "OrderBook")
 
