@@ -26,7 +26,7 @@ def compare_full_vs_aggr(full_book: dict, aggr_book: dict) -> list:
             full_levels.sort()
         else:
             full_levels.sort(reverse=True)
-        aggr_levels = [level for level in aggr_book[side + "_aggr"] if level["real_num_orders"] != "0"]
+        aggr_levels = [level for level in aggr_book[side + "_aggr"] if level["real_num_orders"] != 0]
         for i in range(aggr_book["aggr_max_levels"]):
             if i < len(full_levels) and i < len(aggr_levels):
                 price_condition = full_levels[i] == aggr_levels[i]["price"]
