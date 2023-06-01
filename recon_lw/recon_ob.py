@@ -714,7 +714,7 @@ def is_side_update_purely_implied(side, new_price, new_real_qty, new_impl_qty,
         return new_real_n_orders == 0
     if book[side+"_price"] == new_price:  # top level update
         return new_real_n_orders == book[side+"_real_n_orders"] and book[side+"_real_qty"] == new_real_qty
-    if reverse * book[side+"_price"] < reverse * new_price:  # price is better - new level is added
+    if (reverse * book[side+"_price"]) < (reverse * new_price):  # price is better - new level is added
         return new_real_n_orders == 0
     else:  # price is worse old level is deleted
         return book[side+"_real_n_orders"] == 0
