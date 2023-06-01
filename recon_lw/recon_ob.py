@@ -744,6 +744,12 @@ def ob_top_update(ask_price: float, ask_real_qty: int, ask_impl_qty: int, ask_re
     else:
         bid_implied_only = False
 
+    order_book["implied_only_debug"] = {
+        "ask_unchanged": ask_unchanged,
+        "ask_implied_only": ask_implied_only,
+        "bid_unchanged": bid_unchanged,
+        "bid_implied_only": bid_implied_only
+    }
     order_book["implied_only"] = (ask_implied_only and bid_unchanged)\
                                  or (bid_implied_only and ask_unchanged) or (bid_implied_only and ask_implied_only)
 

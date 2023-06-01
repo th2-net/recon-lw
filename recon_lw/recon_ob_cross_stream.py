@@ -96,7 +96,9 @@ def compare_aggr_vs_top(aggr_book: dict, top_book: dict):
 
 def compare_full_vs_top(full_book: dict, top_book: dict):
     problems = []
-    if len(full_book["ask"]) > 0:
+    if top_book["ask_real_n_orders"] == 0 and top_book["ask_impl_n_orders"] != 0:
+        problems = []
+    elif len(full_book["ask"]) > 0:
         if top_book["ask_real_qty"] == 0:
             problems.append({"synopsys": "top_miss_level", "side": "ask"})
         else:
@@ -112,7 +114,9 @@ def compare_full_vs_top(full_book: dict, top_book: dict):
         if top_book["ask_real_qty"] != 0:
             problems.append({"synopsys": "full_miss_level", "side": "ask"})
 
-    if len(full_book["bid"]) > 0:
+    if top_book["bid_real_n_orders"] == 0 and top_book["bid_impl_n_orders"] != 0:
+        problems = problems
+    elif len(full_book["bid"]) > 0:
         if top_book["bid_real_qty"] == 0:
             problems.append({"synopsys": "top_miss_level", "side": "bid"})
         else:
@@ -139,8 +143,6 @@ def ob_compare_get_timestamp_key1_key2_aggr(o, custom_settings):
                                                             o["body"]["aggr_seq"]["limit_v2"]), None
 
     if o["body"]["sessionId"] == custom_settings["comp_session"]:
-        if "implied_only" in o["body"] and o["body"]["implied_only"]:
-            return None, None, None
         return o["body"]["timestamp"], None, "{0}_{1}_{2}".format(o["body"]["book_id"],
                                                                   o["body"]["time_of_event"],
                                                                   o["body"]["aggr_seq"]["limit_v2"])
@@ -158,8 +160,6 @@ def ob_compare_get_timestamp_key1_key2_top(o, custom_settings):
                                                             o["body"]["aggr_seq"]["top_v2"]), None
 
     if o["body"]["sessionId"] == custom_settings["comp_session"]:
-        if "implied_only" in o["body"] and o["body"]["implied_only"]:
-            return None, None, None
         return o["body"]["timestamp"], None, "{0}_{1}_{2}".format(o["body"]["book_id"],
                                                                   o["body"]["time_of_event"],
                                                                   o["body"]["aggr_seq"]["top_v2"])
@@ -211,8 +211,9 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                     "tech_info": tech_info})
         save_events([error_event])
     elif match[1] is not None:
-        error_event = create_event("StreamMismatchNoFullvsAggr",
-                                   "StreamMismatchNoFullvsAggr",
+        e_type = "StreamMismatchNoFullvsAggrImpl" if match[1]["body"]["implied_only"] else "StreamMismatchNoFullvsAggr"
+        error_event = create_event(e_type,
+                                   e_type,
                                    False,
                                    {"aggr_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
@@ -247,8 +248,9 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                     "sessionId": match[0]["body"]["sessionId"]})
         save_events([error_event])
     elif match[1] is not None:
-        error_event = create_event("StreamMismatchNoFullvsTop",
-                                   "StreamMismatchNoFullvsTop",
+        e_type = "StreamMismatchNoFullvsTopImpl" if match[1]["body"]["implied_only"] else "StreamMismatchNoFullvsTop"
+        error_event = create_event(e_type,
+                                   e_type,
                                    False,
                                    {"top_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],
