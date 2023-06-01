@@ -140,9 +140,6 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                 r["parentEventId"] = parent_event["eventId"]
                 r["attachedMessageIds"] = [mess["messageId"]]
                 events.append(r)
-        book["last_operation"] = operation.__name__
-        book["last_params"] = initial_parameters
-
 
     dbg_event = recon_lw.create_event("DebugEvent",
                                       "DebugEvent",
@@ -733,12 +730,19 @@ def ob_top_update(ask_price: float, ask_real_qty: int, ask_impl_qty: int, ask_re
 
     ask_unchanged = is_side_unchanged("ask", ask_price, ask_real_qty, ask_impl_qty,
                                       ask_real_n_orders, ask_impl_n_orders, order_book)
-    ask_implied_only = is_side_update_purely_implied("ask", ask_price, ask_real_qty, ask_impl_qty,
-                                                     ask_real_n_orders, ask_impl_n_orders, order_book)
+    if not ask_unchanged:
+        ask_implied_only = is_side_update_purely_implied("ask", ask_price, ask_real_qty, ask_impl_qty,
+                                                         ask_real_n_orders, ask_impl_n_orders, order_book)
+    else:
+        ask_implied_only = False
+
     bid_unchanged = is_side_unchanged("bid", bid_price, bid_real_qty, bid_impl_qty,
                                       bid_real_n_orders, bid_impl_n_orders, order_book)
-    bid_implied_only = is_side_update_purely_implied("bid", bid_price, bid_real_qty, bid_impl_qty,
-                                                     bid_real_n_orders, bid_impl_n_orders, order_book)
+    if not bid_unchanged:
+        bid_implied_only = is_side_update_purely_implied("bid", bid_price, bid_real_qty, bid_impl_qty,
+                                                         bid_real_n_orders, bid_impl_n_orders, order_book)
+    else:
+        bid_implied_only = False
 
     order_book["implied_only"] = (ask_implied_only and bid_unchanged)\
                                  or (bid_implied_only and ask_unchanged) or (bid_implied_only and ask_implied_only)
