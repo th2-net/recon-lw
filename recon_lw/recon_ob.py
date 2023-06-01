@@ -638,12 +638,12 @@ def ob_top_clean_book(str_time_of_event, order_book: dict) -> tuple:
     else:
         reset_aggr_seq(order_book)
 
-    order_book["ask_price"] = 0
+    order_book["ask_price"] = None
     order_book["ask_real_qty"] = 0
     order_book["ask_impl_qty"] = 0
     order_book["ask_real_n_orders"] = 0
     order_book["ask_impl_n_orders"] = 0
-    order_book["bid_price"] = 0
+    order_book["bid_price"] = None
     order_book["bid_real_qty"] = 0
     order_book["bid_impl_qty"] = 0
     order_book["bid_real_n_orders"] = 0
