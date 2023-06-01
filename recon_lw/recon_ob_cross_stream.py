@@ -179,7 +179,7 @@ def ob_compare_get_timestamp_key1_key2_top_aggr(o, custom_settings):
     if o["body"]["sessionId"] == custom_settings["aggr_session"]:
         return o["body"]["timestamp"], None, "{0}_{1}_{2}".format(o["body"]["book_id"],
                                                                   o["body"]["time_of_event"],
-                                                                  o["body"]["aggr_seq"]["limit_v2"])
+                                                                  o["body"]["aggr_seq"]["top_v2"])
 
     return None, None, None
 
