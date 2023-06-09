@@ -247,10 +247,10 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
     for m in sequenced_batch:
         seq = m[0]
         mess = m[1]
-        # process gaps
+        # process gaps TODO better way to add sessionId to gap event
         if "gap" in mess:
             gap_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"], "SeqGap", event_sequence, ok=False,
-                                              body={"seq_num": seq, "sessionId":mess['sessionId']}, parentId=parent_event["eventId"])
+                                              body={"seq_num": seq, "sessionId":messages_chunk[0]['sessionId']}, parentId=parent_event["eventId"])
             events.append(gap_event)
             n_processed += 1
             continue
