@@ -106,6 +106,7 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
             result["operation_params"] = initial_parameters
             result["initial_book"] = initial_book
             result["book_id"] = book_id
+            result["sessionId"] = mess["sessionId"]
             update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
                                                  event_sequence,
                                                  ok=False,
@@ -202,7 +203,7 @@ def process_market_data_update(mess_batch, events,  books_cache, get_book_id_fun
     for m in mess_batch:
         book_ids_list, result = get_book_id_func(m)
         if result is not None:
-            book_id_event = recon_lw.create_event("GetBookEroor:" + parent_event["eventName"], "GetBookEroor",
+            book_id_event = recon_lw.create_event("GetBookError:" + parent_event["eventName"], "GetBookError",
                                                   event_sequence,
                                                   ok=False,
                                                   body=result,
@@ -249,7 +250,7 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
         # process gaps
         if "gap" in mess:
             gap_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"], "SeqGap", event_sequence, ok=False,
-                                              body={"seq_num": seq}, parentId=parent_event["eventId"])
+                                              body={"seq_num": seq, "sessionId":mess['sessionId']}, parentId=parent_event["eventId"])
             events.append(gap_event)
             n_processed += 1
             continue
@@ -317,7 +318,7 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
         d_ev = recon_lw.create_event("Duplicate:" + rule_settings["rule_root_event"]["eventName"], "Duplicate",
                                      event_sequence,
                                      ok=False,
-                                     body={"seq_num": item[0]},
+                                     body={"seq_num": item[0], "sessionId": rule_settings["sessionId"]},
                                      parentId=rule_settings["rule_root_event"]["eventId"])
         d_ev["attachedMessageIds"] = [item[1], item[2]]
         dupl_events.append(d_ev)
