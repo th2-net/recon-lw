@@ -662,6 +662,10 @@ def ob_indicative_market_data_trade(trade_price: float, str_time_of_event, order
         order_book["max_price"] = trade_price
     if trade_price < order_book["min_price"]:
         order_book["min_price"] = trade_price
+    if "total_n_trades" not in order_book:
+        order_book["total_n_trades"] = 1
+    else:
+        order_book["total_n_trades"] += 1
 
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["top_delta"] = 0
