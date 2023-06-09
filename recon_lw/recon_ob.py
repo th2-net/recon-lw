@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from sortedcontainers import SortedKeyList
 from th2_data_services.utils.message_utils import message_utils
 from recon_lw import recon_lw
+from th2_data_services.utils import time as time_utils
 import copy
 
 
@@ -20,6 +21,9 @@ def sequence_cache_add(seq_num: int, ts: dict, m: dict, sequence_cache: dict) ->
             sequence.update([(i, gap) for i in range(last_elem[0] + 1, seq_num)])
             times.add((ts, seq_num))
         elif seq_num < first_elem[0]:
+            #  radical difference means sequence Reset
+            if first_elem[0] - seq_num > 500:
+                raise Exception(f'Stream break detected: got{seq_num} vs {first_elem[0]}')
             sequence.update([(i, gap) for i in range(seq_num + 1, first_elem[0])])
             sequence.add(seq_element)
             times.add((ts, seq_num))
@@ -292,7 +296,14 @@ def collect_ob_stream(next_batch: list, rule_dict: dict) -> None:
         # seq, ts = sequence_timestamp_extract(m)
         if seq_list is not None:
             for mess, seq, ts in seq_list:
-                sequence_cache_add(seq, ts, mess, sequence_cache)
+                try:
+                    sequence_cache_add(seq, ts, mess, sequence_cache)
+                except Exception as e:
+                    print("Critical Error Detected: ", e)
+                    print("sequence:  ", seq)
+                    print("timestamp:  ", time_utils.extract_timestamp(ts))
+                    print("mess:  ", mess)
+                    raise e
 
 
 def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_events_func) -> None:
