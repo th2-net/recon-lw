@@ -651,7 +651,7 @@ def ob_top_clean_book(str_time_of_event, order_book: dict) -> tuple:
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_indicative_market_data_trade(trade_price: float, str_time_of_event, order_book: dict):
+def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
