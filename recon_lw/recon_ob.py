@@ -551,7 +551,9 @@ def ob_aggr_add_level(side: str, level: int, price: float, real_qty: int, real_n
     side_key = side + "_aggr"
     new_index = level - 1
     if not 0 <= new_index <= len(order_book[side_key]):
-        result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
+        result_body["error"] = "Unexpected level {0}, against existing {1} levels on {2} side".format(level,
+                                                                                                      len(order_book[side_key]),
+                                                                                                      side_key)
         return result_body, []
 
     new_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders, "impl_qty": impl_qty,
@@ -577,8 +579,9 @@ def ob_aggr_delete_level(side: str, level: int, str_time_of_event, order_book: d
     side_key = side + "_aggr"
     del_index = level - 1
     if not 0 <= del_index < len(order_book[side_key]):
-        result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
-        return result_body, []
+        result_body["error"] = "Unexpected level {0}, against existing {1} levels on {2} side".format(level,
+                                                                                                      len(order_book[side_key]),
+                                                                                                      side_key)
 
     #is it purely implied
     order_book["implied_only"] = (order_book[side_key][del_index]["real_num_orders"] == 0)
@@ -605,7 +608,9 @@ def ob_aggr_update_level(side: str, level: int, price: float, real_qty: int, rea
     side_key = side + "_aggr"
     update_index = level - 1
     if not 0 <= update_index < len(order_book[side_key]):
-        result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
+        result_body["error"] = "Unexpected level {0}, against existing {1} levels on {2} side".format(level,
+                                                                                                      len(order_book[side_key]),
+                                                                                                      side_key)
         return result_body, []
 
     #is it purely implied
