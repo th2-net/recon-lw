@@ -778,3 +778,53 @@ def ob_top_update(ask_price: float, ask_real_qty: int, ask_impl_qty: int, ask_re
     order_book["aggr_seq"]["top_delta"] = 1
 
     return {}, [copy.deepcopy(order_book)]
+
+
+def display_l1(order_book):
+    header = ["bid_price", "bid_real_qty", "bid_impl_qty", "bid_real_n_orders", "bid_impl_n_orders",
+              "ask_price", "ask_real_qty", "ask_impl_qty", "ask_real_n_orders", "ask_impl_n_orders"]
+    data = [order_book[col] for col in header]
+    return [header, data]
+
+
+def display_l2(order_book):
+    header = ["bid_price", "bid_real_qty", "bid_impl_qty", "bid_real_num_orders", "bid_impl_num_orders",
+              "ask_price", "ask_real_qty", "ask_impl_qty", "ask_real_num_orders", "ask_impl_num_orders"]
+    result = [header]
+    levels = max(len(order_book["bid_aggr"]), len(order_book["ask_aggr"]))
+    keys = ["bid_aggr","bid_aggr"]
+    shifts = [0,5]
+    for i in range(levels):
+        line = []
+        for key, shift in zip(keys, shifts):
+            if i < len(order_book[key]):
+                for j in range(5):
+                    line.append(order_book[key][i][header[j+shift]])
+            else:
+                line.extend([None]*5)
+        result.append(line)
+    return result
+
+
+def display_l3(order_book):
+    header = ["bid_price", "bid_qty", "bid_order_id",
+              "ask_price", "ask_qty", "ask_order_id"]
+    result = [header]
+    bid_prices = list(order_book["bid"])
+    bid_prices.sort()
+    bid_items = [[p, q, o_id] for p in bid_prices for o_id,q in order_book["bid"][p].items()]
+    ask_items = [[p, q, o_id] for p in bid_prices for o_id,q in order_book["ask"][p].items()]
+    levels = max(len(bid_items), len(ask_items))
+    for i in range(levels):
+        line = []
+        if i < len(bid_items):
+            line.extend(bid_items[i])
+        else:
+            line.extend([None]*3)
+        if i < len(ask_items):
+            line.extend(ask_items[i])
+        else:
+            line.extend([None]*3)
+        result.append(line)
+    return result
+
