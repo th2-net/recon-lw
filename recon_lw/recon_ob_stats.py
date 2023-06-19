@@ -81,7 +81,8 @@ def ob_compare_stats(source_stat_messages_path: pathlib.PosixPath,
     streams2 = recon_lw.open_streams(source_stat_messages_path,
                                      lambda n: any(s in n for s in all_stat_sessions),
                                      expanded_messages=True)
-    streams.extend(streams2)
+    for elem in streams2:
+        streams.add(elem)
 
     message_buffer = [None] * 100
     buffer_len = 100

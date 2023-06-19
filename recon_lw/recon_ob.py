@@ -3,68 +3,8 @@ from sortedcontainers import SortedKeyList
 from th2_data_services.utils.message_utils import message_utils
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
+from recon_lw.SequenceCache import SequenceCache
 import copy
-
-
-def sequence_cache_add(seq_num: int, ts: dict, m: dict, sequence_cache: dict) -> None:
-    seq_element = (seq_num, m)
-    sequence = sequence_cache["sequence"]
-    # gaps = sequence_cache["gaps"]
-    gap = {"gap": True}
-    duplicates = sequence_cache["duplicates"]
-    times = sequence_cache["times"]
-    if len(sequence) > 0:
-        last_elem = sequence[-1]
-        first_elem = sequence[0]
-        if seq_num > last_elem[0]:
-            sequence.add(seq_element)
-            sequence.update([(i, gap) for i in range(last_elem[0] + 1, seq_num)])
-            times.add((ts, seq_num))
-        elif seq_num < first_elem[0]:
-            #  radical difference means sequence Reset
-            if first_elem[0] - seq_num > 500:
-                raise Exception(f'Stream break detected: got{seq_num} vs {first_elem[0]}')
-            sequence.update([(i, gap) for i in range(seq_num + 1, first_elem[0])])
-            sequence.add(seq_element)
-            times.add((ts, seq_num))
-        else:
-            if "gap" in sequence[seq_num - first_elem[0]][1]:
-                del sequence[seq_num - first_elem[0]]
-                sequence.add(seq_element)
-                times.add((ts, seq_num))
-            else:
-                duplicates.add((seq_num, m["messageId"], sequence[seq_num - first_elem[0]][1]["messageId"]))
-    else:
-        sequence.add(seq_element)
-        times.add((ts, seq_num))
-
-
-def flush_sequence_get_collection(current_ts: dict, horizon_delay: int, sequence_cache: dict) -> SortedKeyList:
-    times = sequence_cache["times"]
-    sequence = sequence_cache["sequence"]
-    sub_seq = None
-    if current_ts is not None:
-        edge_timestamp = {"epochSecond": current_ts["epochSecond"] - horizon_delay,
-                          "nano": 0}
-        horizon_edge = times.bisect_key_left(recon_lw.time_stamp_key(edge_timestamp))
-        if horizon_edge < len(times):
-            seq_index = times[horizon_edge][1]
-            sub_seq = sequence.irange(None, (seq_index, None), (False, False))
-            for i in range(0, horizon_edge):
-                times.pop(0)
-        else:
-            sub_seq = sequence
-            times.clear()
-        return sub_seq
-    else:
-        times.clear()
-        return sequence
-
-
-def flush_sequence_clear_cache(processed_len: int, sequence_cache: dict) -> None:
-    sequence = sequence_cache["sequence"]
-    for i in range(0, processed_len):
-        sequence.pop(0)
 
 
 def combine_operations(operations_list):
@@ -281,9 +221,10 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
 
 
 def init_ob_stream(rule_settings: dict) -> None:
-    rule_settings["sequence_cache"] = {"sequence": SortedKeyList(key=lambda item: item[0]),
-                                       "times": SortedKeyList(key=lambda t: recon_lw.time_stamp_key(t[0])),
-                                       "duplicates": SortedKeyList(key=lambda item: item[0])}
+    rule_settings["sequence_cache"] = SequenceCache(rule_settings["horizon_delay"])
+        #{"sequence": SortedKeyList(key=lambda item: item[0]),
+        #                               "times": SortedKeyList(key=lambda t: recon_lw.time_stamp_key(t[0])),
+        #                               "duplicates": SortedKeyList(key=lambda item: item[0])}
     rule_settings["books_cache"] = {}
 
 
@@ -292,12 +233,11 @@ def collect_ob_stream(next_batch: list, rule_dict: dict) -> None:
     sequence_timestamp_extract = rule_dict["sequence_timestamp_extract"]
     for m in next_batch:
         seq_list = sequence_timestamp_extract(m)
-
-        # seq, ts = sequence_timestamp_extract(m)
         if seq_list is not None:
             for mess, seq, ts in seq_list:
                 try:
-                    sequence_cache_add(seq, ts, mess, sequence_cache)
+                    sequence_cache.add_object(seq, ts, mess)
+                    #sequence_cache_add(seq, ts, mess, sequence_cache)
                 except Exception as e:
                     print("Critical Error Detected: ", e)
                     print("sequence:  ", seq)
@@ -307,7 +247,8 @@ def collect_ob_stream(next_batch: list, rule_dict: dict) -> None:
 
 
 def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_events_func) -> None:
-    seq_batch = flush_sequence_get_collection(ts, rule_settings["horizon_delay"], rule_settings["sequence_cache"])
+    #seq_batch = flush_sequence_get_collection(ts, rule_settings["horizon_delay"], rule_settings["sequence_cache"])
+    seq_batch = rule_settings["sequence_cache"].get_next_chunk(ts)
     n_processed = process_ob_rules(seq_batch,
                                    rule_settings["books_cache"],
                                    rule_settings["get_book_id"],
@@ -320,7 +261,8 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
                                    rule_settings["log_books_filter"] if "log_books_filter" in rule_settings else None,
                                    rule_settings["aggregate_batch_updates"] if "aggregate_batch_updates" in rule_settings else False)
     ## Process duplicated
-    duplicates = rule_settings["sequence_cache"]["duplicates"]
+    #duplicates = rule_settings["sequence_cache"]["duplicates"]
+    duplicates = rule_settings["sequence_cache"].get_duplicates_collection()
     n_dupl = len(duplicates)
     dupl_events = []
     for i in range(0, n_dupl):
@@ -330,15 +272,15 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
                                      ok=False,
                                      body={"seq_num": item[0]},
                                      parentId=rule_settings["rule_root_event"]["eventId"])
-        d_ev["attachedMessageIds"] = [item[1], item[2]]
+        d_ev["attachedMessageIds"] = [item[1]["messageId"], item[2]["messageId"]]
         dupl_events.append(d_ev)
     save_events_func(dupl_events)
     duplicates.clear()
-    flush_sequence_clear_cache(n_processed, rule_settings["sequence_cache"])
+    rule_settings["sequence_cache"].clear_processed_chunk(n_processed)
+    #flush_sequence_clear_cache(n_processed, rule_settings["sequence_cache"])
 
 
 def init_aggr_seq(order_book: dict) -> None:
-    #order_book["aggr_seq"] = {"top_v": 0, "top_delta": 0, "limit_v": 0, "limit_delta": 0, "limit_v2" : 0, "top_v2" : 0, "affected_side": "na", "affected_level": -1}
     order_book["aggr_seq"] = {"top_delta": 0, "limit_delta": 0}
     order_book["implied_only"] = False
 
@@ -350,37 +292,14 @@ def reset_aggr_seq(order_book):
 
 def reflect_price_update_in_version(side: str, price: float,str_time_of_event,order_book: dict):
     level = get_price_level(side, price, order_book)
-    #order_book["aggr_seq"]["affected_side"] = side
-    #order_book["aggr_seq"]["affected_level"] = level
 
     max_levels = order_book["aggr_max_levels"]
     if level <= max_levels:
-        #order_book["aggr_seq"]["limit_v"] += 1
         order_book["aggr_seq"]["limit_delta"] = 1
     if level == 1:
-        #order_book["aggr_seq"]["top_v"] += 1
         order_book["aggr_seq"]["top_delta"] = 1
 
     order_book["time_of_event"] = str_time_of_event
-
-        #order_book["aggr_seq"]["limit_v2"] = 0
-        #order_book["aggr_seq"]["limit_v2"] = 0
-    #else:
-    #    if str_time_of_event == order_book["time_of_event"]:
-    #        if level <= max_levels:
-    #            order_book["aggr_seq"]["limit_v2"] += 1
-    #        if level == 1:
-    #            order_book["aggr_seq"]["top_v2"] += 1
-    #    else:
-     #       order_book["time_of_event"] = str_time_of_event
-     #       if level <= max_levels:
-     #           order_book["aggr_seq"]["limit_v2"] = 0
-     #       else:
-     #           order_book["aggr_seq"]["limit_v2"] = -1
-     #       if level == 1:
-     #           order_book["aggr_seq"]["top_v2"] = 0
-     #       else:
-     #           order_book["aggr_seq"]["top_v2"] = -1
 
 
 def ob_add_order(order_id: str, price: float, size: int, side: str, str_time_of_event ,order_book: dict) -> tuple:
