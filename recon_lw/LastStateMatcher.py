@@ -54,13 +54,13 @@ class LastStateMatcher:
                 current_len = len(self._state_time_index)
                 next_key = None
                 if i < current_len:
-                    next_key = recon_lw.time_stamp_key(self._state_time_index[i+1][0]) + "_" + \
-                               self._state_time_index[i+1][1]
+                    next_key = recon_lw.time_stamp_key(self._state_time_index[i][0]) + "_" + \
+                               self._state_time_index[i][1]
                 if i == current_len or index_key != next_key:
                     self._state_time_index.add([ts2, key2, order, o])
                     self._state_cache_add_item(ts2,key2)
                 else:
-                    rec = self._state_time_index[i+1]
+                    rec = self._state_time_index[i]
                     if order >= rec[2]:
                         rec[2] = order
                         rec[3] = o
