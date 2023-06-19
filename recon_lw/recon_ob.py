@@ -39,11 +39,13 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
         initial_book = copy.deepcopy(book)
         initial_parameters = copy.copy(parameters)
         parameters["order_book"] = book
-        result, log_entries = operation(**parameters)
         if "v" not in book:
-            book["v"] = 1
-        else:
-            book["v"] += 1
+            book["v"] = 0
+        initial_v = book["v"]
+        result, log_entries = operation(**parameters)
+        for i in range(len(log_entries)):
+            log_entries[i]["v"] = initial_v+i+1
+        book["v"] += initial_v + len(log_entries)
 
         if len(result) > 0:
             result["operation"] = operation.__name__
