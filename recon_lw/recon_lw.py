@@ -311,7 +311,7 @@ def open_scoped_events_streams(streams_path, name_filter=None):
     return streams
 
 
-def open_streams(streams_path, name_filter=None):
+def open_streams(streams_path, name_filter=None, expanded_messages=False):
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
     files = listdir(streams_path)
     for f in files:
@@ -319,7 +319,11 @@ def open_streams(streams_path, name_filter=None):
             continue
         if name_filter is not None and not name_filter(f):
             continue
-        stream = Data.from_cache_file(path.join(streams_path, f))
+        data_object = Data.from_cache_file(path.join(streams_path, f))
+        if expanded_messages:
+            stream = (mm for m in data_object for mm in message_utils.expand_message(m))
+        else:
+            stream = Data.from_cache_file(path.join(streams_path, f))
         ts0 = {"epochSecond": 0, "nano": 0}
         streams.add((ts0, iter(stream), None))
 

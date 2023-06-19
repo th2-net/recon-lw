@@ -188,8 +188,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_aggr(match[0]["body"], match[1]["body"])
         if len(comp_res) > 0:
-            error_event = create_event("StreamMismatchAggr",
-                                       "StreamMismatchAggr",
+            error_event = create_event("23:mismatch",
+                                       "23:mismatch",
                                        False,
                                        {"full_book_event": match[0]["eventId"],
                                         "aggr_book_event": match[1]["eventId"],
@@ -200,8 +200,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
             save_events([error_event])
     elif match[0] is not None:
         tech_info = ob_compare_get_timestamp_key1_key2_aggr(match[0], custom_settings)
-        error_event = create_event("StreamMismatchNoAggr",
-                                   "StreamMismatchNoAggr",
+        error_event = create_event("23:missing2",
+                                   "23:missing2",
                                    False,
                                    {"full_book_event": match[0]["eventId"],
                                     "book_id": match[0]["body"]["book_id"],
@@ -211,7 +211,7 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                                     "tech_info": tech_info})
         save_events([error_event])
     elif match[1] is not None:
-        e_type = "StreamMismatchNoFullvsAggrImpl" if match[1]["body"]["implied_only"] else "StreamMismatchNoFullvsAggr"
+        e_type = "23:missing3 impl" if match[1]["body"]["implied_only"] else "23:missing3"
         error_event = create_event(e_type,
                                    e_type,
                                    False,
@@ -227,8 +227,8 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_top(match[0]["body"], match[1]["body"])
         if len(comp_res) > 0:
-            error_event = create_event("StreamMismatchTop",
-                                       "StreamMismatchTop",
+            error_event = create_event("13:mismatch",
+                                       "13:mismatch",
                                        False,
                                        {"full_book_event": match[0]["eventId"],
                                         "top_book_event": match[1]["eventId"],
@@ -238,8 +238,8 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                         "errors": comp_res})
             save_events([error_event])
     elif match[0] is not None:
-        error_event = create_event("StreamMismatchNoTop",
-                                   "StreamMismatchNoTop",
+        error_event = create_event("13:missing1",
+                                   "13:missing1",
                                    False,
                                    {"full_book_event": match[0]["eventId"],
                                     "book_id": match[0]["body"]["book_id"],
@@ -248,7 +248,7 @@ def ob_compare_interpret_match_top(match, custom_settings, create_event, save_ev
                                     "sessionId": match[0]["body"]["sessionId"]})
         save_events([error_event])
     elif match[1] is not None:
-        e_type = "StreamMismatchNoFullvsTopImpl" if match[1]["body"]["implied_only"] else "StreamMismatchNoFullvsTop"
+        e_type = "13:missing3 impl" if match[1]["body"]["implied_only"] else "13:missing3"
         error_event = create_event(e_type,
                                    e_type,
                                    False,
@@ -264,8 +264,8 @@ def ob_compare_interpret_match_top_aggr(match, custom_settings, create_event, sa
     if match[0] is not None and match[1] is not None:
         comp_res = compare_aggr_vs_top(match[1]["body"], match[0]["body"])
         if len(comp_res) > 0:
-            error_event = create_event("StreamMismatchTopAggr",
-                                       "StreamMismatchTopAggr",
+            error_event = create_event("12:mismatch",
+                                       "12:mismatch",
                                        False,
                                        {"top_book_event": match[0]["eventId"],
                                         "aggr_book_event": match[1]["eventId"],
@@ -275,8 +275,8 @@ def ob_compare_interpret_match_top_aggr(match, custom_settings, create_event, sa
                                         "errors": comp_res})
             save_events([error_event])
     elif match[0] is not None:
-        error_event = create_event("StreamMismatchNoAggrVsTop",
-                                   "StreamMismatchNoAggrVsTop",
+        error_event = create_event("12:missing2",
+                                   "12:missing2",
                                    False,
                                    {"top_book_event": match[0]["eventId"],
                                     "book_id": match[0]["body"]["book_id"],
@@ -285,8 +285,8 @@ def ob_compare_interpret_match_top_aggr(match, custom_settings, create_event, sa
                                     "sessionId": match[0]["body"]["sessionId"]})
         save_events([error_event])
     elif match[1] is not None:
-        error_event = create_event("StreamMismatchNoTopVsAggr",
-                                   "StreamMismatchNoTopVsAggr",
+        error_event = create_event("12:missing1",
+                                   "12:missing1",
                                    False,
                                    {"aggr_book_event": match[1]["eventId"],
                                     "book_id": match[1]["body"]["book_id"],

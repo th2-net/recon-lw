@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from sortedcontainers import SortedKeyList
 from th2_data_services.utils.message_utils import message_utils
 from recon_lw import recon_lw
+from th2_data_services.utils import time as time_utils
 import copy
 
 
@@ -20,6 +21,9 @@ def sequence_cache_add(seq_num: int, ts: dict, m: dict, sequence_cache: dict) ->
             sequence.update([(i, gap) for i in range(last_elem[0] + 1, seq_num)])
             times.add((ts, seq_num))
         elif seq_num < first_elem[0]:
+            #  radical difference means sequence Reset
+            if first_elem[0] - seq_num > 500:
+                raise Exception(f'Stream break detected: got{seq_num} vs {first_elem[0]}')
             sequence.update([(i, gap) for i in range(seq_num + 1, first_elem[0])])
             sequence.add(seq_element)
             times.add((ts, seq_num))
@@ -293,7 +297,14 @@ def collect_ob_stream(next_batch: list, rule_dict: dict) -> None:
         # seq, ts = sequence_timestamp_extract(m)
         if seq_list is not None:
             for mess, seq, ts in seq_list:
-                sequence_cache_add(seq, ts, mess, sequence_cache)
+                try:
+                    sequence_cache_add(seq, ts, mess, sequence_cache)
+                except Exception as e:
+                    print("Critical Error Detected: ", e)
+                    print("sequence:  ", seq)
+                    print("timestamp:  ", time_utils.extract_timestamp(ts))
+                    print("mess:  ", mess)
+                    raise e
 
 
 def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_events_func) -> None:
@@ -541,7 +552,9 @@ def ob_aggr_add_level(side: str, level: int, price: float, real_qty: int, real_n
     side_key = side + "_aggr"
     new_index = level - 1
     if not 0 <= new_index <= len(order_book[side_key]):
-        result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
+        result_body["error"] = "Unexpected level {0}, against existing {1} levels on {2} side".format(level,
+                                                                                                      len(order_book[side_key]),
+                                                                                                      side_key)
         return result_body, []
 
     new_level = {"price": price, "real_qty": real_qty, "real_num_orders": real_num_orders, "impl_qty": impl_qty,
@@ -567,8 +580,9 @@ def ob_aggr_delete_level(side: str, level: int, str_time_of_event, order_book: d
     side_key = side + "_aggr"
     del_index = level - 1
     if not 0 <= del_index < len(order_book[side_key]):
-        result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
-        return result_body, []
+        result_body["error"] = "Unexpected level {0}, against existing {1} levels on {2} side".format(level,
+                                                                                                      len(order_book[side_key]),
+                                                                                                      side_key)
 
     #is it purely implied
     order_book["implied_only"] = (order_book[side_key][del_index]["real_num_orders"] == 0)
@@ -595,7 +609,9 @@ def ob_aggr_update_level(side: str, level: int, price: float, real_qty: int, rea
     side_key = side + "_aggr"
     update_index = level - 1
     if not 0 <= update_index < len(order_book[side_key]):
-        result_body["error"] = "Unexpected level {0}, against existing {1}".format(level, len(order_book[side_key]))
+        result_body["error"] = "Unexpected level {0}, against existing {1} levels on {2} side".format(level,
+                                                                                                      len(order_book[side_key]),
+                                                                                                      side_key)
         return result_body, []
 
     #is it purely implied
@@ -652,7 +668,7 @@ def ob_top_clean_book(str_time_of_event, order_book: dict) -> tuple:
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_indicative_market_data_trade(trade_price: float, str_time_of_event, order_book: dict):
+def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -663,6 +679,10 @@ def ob_indicative_market_data_trade(trade_price: float, str_time_of_event, order
         order_book["max_price"] = trade_price
     if trade_price < order_book["min_price"]:
         order_book["min_price"] = trade_price
+    if "total_n_trades" not in order_book:
+        order_book["total_n_trades"] = 1
+    else:
+        order_book["total_n_trades"] += 1
 
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["top_delta"] = 0
@@ -764,3 +784,53 @@ def ob_top_update(ask_price: float, ask_real_qty: int, ask_impl_qty: int, ask_re
     order_book["aggr_seq"]["top_delta"] = 1
 
     return {}, [copy.deepcopy(order_book)]
+
+
+def display_l1(order_book):
+    header = ["bid_price", "bid_real_qty", "bid_impl_qty", "bid_real_n_orders", "bid_impl_n_orders",
+              "ask_price", "ask_real_qty", "ask_impl_qty", "ask_real_n_orders", "ask_impl_n_orders"]
+    data = [order_book[col] for col in header]
+    return [header, data]
+
+
+def display_l2(order_book):
+    header = ["bid_price", "bid_real_qty", "bid_impl_qty", "bid_real_num_orders", "bid_impl_num_orders",
+              "ask_price", "ask_real_qty", "ask_impl_qty", "ask_real_num_orders", "ask_impl_num_orders"]
+    result = [header]
+    levels = max(len(order_book["bid_aggr"]), len(order_book["ask_aggr"]))
+    keys = ["bid_aggr","bid_aggr"]
+    shifts = [0,5]
+    for i in range(levels):
+        line = []
+        for key, shift in zip(keys, shifts):
+            if i < len(order_book[key]):
+                for j in range(5):
+                    line.append(order_book[key][i][header[j+shift]])
+            else:
+                line.extend([None]*5)
+        result.append(line)
+    return result
+
+
+def display_l3(order_book):
+    header = ["bid_price", "bid_qty", "bid_order_id",
+              "ask_price", "ask_qty", "ask_order_id"]
+    result = [header]
+    bid_prices = list(order_book["bid"])
+    bid_prices.sort()
+    bid_items = [[p, q, o_id] for p in bid_prices for o_id,q in order_book["bid"][p].items()]
+    ask_items = [[p, q, o_id] for p in bid_prices for o_id,q in order_book["ask"][p].items()]
+    levels = max(len(bid_items), len(ask_items))
+    for i in range(levels):
+        line = []
+        if i < len(bid_items):
+            line.extend(bid_items[i])
+        else:
+            line.extend([None]*3)
+        if i < len(ask_items):
+            line.extend(ask_items[i])
+        else:
+            line.extend([None]*3)
+        result.append(line)
+    return result
+
