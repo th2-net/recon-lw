@@ -35,6 +35,14 @@ def ob_compare_stats_interpret(match, custom_settings, create_event, save_events
     stats = custom_settings["get_expected_stats_func"](match[0])
     fails = {}
     for k, v in stats.items():
+        if v is None:
+            if k in match[1]["body"] and match[1]["body"][k] is not None:
+                fails[k] = [v, match[1]["body"][k]]
+            continue
+        if k not in match[1]["body"]:
+            fails[k] = [v, "not initialized"]
+            continue
+
         if str(v) != str(match[1]["body"][k]):
             fails[k] = [v, str(match[1]["body"][k])]
 
