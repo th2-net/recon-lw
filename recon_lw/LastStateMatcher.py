@@ -91,7 +91,7 @@ class LastStateMatcher:
                 if i == 0:
                     o2 = self._state_cache[key1]["prior_o"]
                 else:
-                    ts2 = records_times[i]
+                    ts2 = records_times[i-1]
                     sti = self._state_time_index.bisect_key_left(recon_lw.time_stamp_key(ts2) + "_" + key1)
                     o2 = self._state_time_index[sti][3]
             self._interpret_func([o1,o2], self._custom_settings, self._create_event, self._send_events)
