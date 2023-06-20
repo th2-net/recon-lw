@@ -104,7 +104,7 @@ class LastStateMatcher:
             state_edge = len(self._state_time_index)
 
         for n in range(state_edge):
-            nxt_state = self._search_time_index.pop(0)
+            nxt_state = self._state_time_index.pop(0)
             self._state_cache_delete_item(nxt_state[0], nxt_state[1], nxt_state[3])
 
     def flush_all(self) -> None:
