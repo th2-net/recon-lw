@@ -595,6 +595,16 @@ def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict
     else:
         reset_aggr_seq(order_book)
 
+    errors = {}
+    if "max_price" not in order_book or order_book["max_price"] is None:
+        errors["trade_book_max_price_eror"] = "max_price not initialized"
+        order_book["max_price"] = trade_price
+
+    if "min_price" not in order_book or order_book["min_price"] is None:
+        errors["trade_book_min_price_eror"] = "min_price not initialized"
+        order_book["min_price"] = trade_price
+
+
     order_book["last_price"] = trade_price
     if trade_price > order_book["max_price"]:
         order_book["max_price"] = trade_price
@@ -609,7 +619,7 @@ def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict
     order_book["aggr_seq"]["top_delta"] = 0
     order_book["aggr_seq"]["limit_delta"] = 0
 
-    return {}, [copy.deepcopy(order_book)]
+    return errors, [copy.deepcopy(order_book)]
 
 
 def ob_indicative_open_price(opening_price: float, str_time_of_event, order_book: dict):
