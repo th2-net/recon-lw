@@ -504,10 +504,10 @@ def ob_aggr_delete_level(side: str, level: int, str_time_of_event, order_book: d
         result_body["error"] = "Unexpected level {0}, against existing {1} levels on {2} side".format(level,
                                                                                                       len(order_book[side_key]),
                                                                                                       side_key)
-
+        return result_body, []
+    
     #is it purely implied
     order_book["implied_only"] = (order_book[side_key][del_index]["real_num_orders"] == 0)
-
     order_book[side_key].pop(del_index)
 
     order_book["aggr_seq"]["top_delta"] = (del_index == 0)
