@@ -736,7 +736,7 @@ def display_l2(order_book):
         for key, shift in zip(keys, shifts):
             if i < len(order_book[key]):
                 for j in range(5):
-                    line.append(order_book[key][i].get([header[j+shift]]))
+                    line.append(order_book[key][i].get(header[j+shift]))
             else:
                 line.extend([None]*5)
         result.append(line)
