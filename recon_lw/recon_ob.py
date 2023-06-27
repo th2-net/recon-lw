@@ -107,8 +107,8 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
     events.append(dbg_event)
 
     if len(obs) > 1 and aggregate_batch_updates:
-        top_not_affected = all(ob["aggr_seq"]["top_delta"] == 0 for ob in obs)
-        limit_not_affected = all(ob["aggr_seq"]["limit_delta"] == 0 for ob in obs)
+        top_not_affected = True #all(ob["aggr_seq"]["top_delta"] == 0 for ob in obs)
+        limit_not_affected = True #all(ob["aggr_seq"]["limit_delta"] == 0 for ob in obs)
         updated_v2 = 0
         for i in range(len(obs) - 1):
             if obs[i]["operation"] in ["ob_change_status", "ob_clean_book", "ob_aggr_clean_book", "ob_top_clean_book"]:
@@ -116,15 +116,20 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                 obs[i]["aggr_seq"]["limit_v2"] = updated_v2
                 updated_v2 += 1
                 continue
+            
+            if obs[i]["aggr_seq"]["top_delta"] == 1:
+                top_not_affected = False
+            if obs[i]["aggr_seq"]["limit_delta"] == 1:
+                limit_not_affected = False
 
             obs[i]["aggr_seq"]["top_delta"] = 0
             obs[i]["aggr_seq"]["top_v2"] = -1
             obs[i]["aggr_seq"]["limit_delta"] = 0
             obs[i]["aggr_seq"]["limit_v2"] = -1
 
-        obs[-1]["aggr_seq"]["top_delta"] = 0 if top_not_affected else 1
+        obs[-1]["aggr_seq"]["top_delta"] = 0 if top_not_affected and obs[-1]["aggr_seq"]["top_delta"] == 0 else 1
         obs[-1]["aggr_seq"]["top_v2"] = updated_v2
-        obs[-1]["aggr_seq"]["limit_delta"] = 0 if limit_not_affected else 1
+        obs[-1]["aggr_seq"]["limit_delta"] = 0 if limit_not_affected and obs[-1]["aggr_seq"]["limit_delta"] == 0 else 1
         obs[-1]["aggr_seq"]["limit_v2"] = updated_v2
     else:
         updated_limit_v2 = 0
