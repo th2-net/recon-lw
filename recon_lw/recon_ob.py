@@ -602,12 +602,13 @@ def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict
 
     errors = {}
     if "max_price" not in order_book or order_book["max_price"] is None:
-        errors["trade_book_max_price_eror"] = "max_price not initialized"
         order_book["max_price"] = trade_price
 
     if "min_price" not in order_book or order_book["min_price"] is None:
-        errors["trade_book_min_price_eror"] = "min_price not initialized"
         order_book["min_price"] = trade_price
+
+    if "open_price" not in order_book or order_book["open_price"] is None:
+        order_book["open_price"] = trade_price
 
 
     order_book["last_price"] = trade_price
@@ -627,20 +628,25 @@ def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict
     return errors, [copy.deepcopy(order_book)]
 
 
-def ob_indicative_open_price(opening_price: float, str_time_of_event, order_book: dict):
+def ob_indicative_open_price(open_price: float, open_size: int, 
+                             open_mid_price: float, str_time_of_event, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
         reset_aggr_seq(order_book)
 
-    order_book["open_price"] = opening_price
-    order_book["last_price"] = opening_price
-    order_book["max_price"] = opening_price
-    order_book["min_price"] = opening_price
+    #order_book["open_price"] = opening_price
+    #order_book["last_price"] = opening_price
+    #order_book["max_price"] = opening_price
+    #order_book["min_price"] = opening_price
+    order_book["ind_open_price"] = open_price
+    order_book["ind_open_size"] = open_size
+    order_book["ind_open_mid_price"] = open_mid_price
+
 
     update_time_and_version(str_time_of_event, order_book)
-    order_book["aggr_seq"]["top_delta"] = 0
-    order_book["aggr_seq"]["limit_delta"] = 0
+    order_book["aggr_seq"]["top_delta"] = 1
+    order_book["aggr_seq"]["limit_delta"] = 1
 
     return {}, [copy.deepcopy(order_book)]
 
@@ -721,6 +727,17 @@ def ob_top_update(ask_price: float, ask_real_qty: int, ask_impl_qty: int, ask_re
 
     return {}, [copy.deepcopy(order_book)]
 
+def display_summary(order_book):
+       header = ["open_price",
+                 "last_price",
+                 "max_price",
+                 "min_price",
+                 "ind_open_size",
+                 "ind_open_price",
+                 "ind_open_mid_price"]
+       data = [None if k not in order_book else order_book[k] for k in header]
+       return [header, data]
+       
 
 def display_l1(order_book):
     header = ["bid_price", "bid_real_qty", "bid_impl_qty", "bid_real_n_orders", "bid_impl_n_orders",
