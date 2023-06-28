@@ -17,6 +17,20 @@ def synopsys(price_condition: bool, num_orders_condition: bool, size_condition: 
         syn += "s"
     return syn
 
+def compare_keys(keys_collection, book1, book2):
+    problems = []
+    for k in keys_collection:
+        if k not in book1 or book1[k] is None:
+            if k in book2 and book2[k] is not None:
+                problems.append({"mismatch_key": k, "1": None, "2": book2[k]})
+                continue
+        if k not in book2 or book2[k] is None:
+            problems.append({"mismatch_key": k, "1": book1[k], "2": None})
+            continue
+        if book1[k] != book2[k]:
+            problems.append({"mismatch_key": k, "1": book1[k], "2": None})
+    return problems
+
 
 def compare_full_vs_aggr(full_book: dict, aggr_book: dict) -> list:
     problems = []
@@ -44,7 +58,14 @@ def compare_full_vs_aggr(full_book: dict, aggr_book: dict) -> list:
                 problems.append({"synopsys": " full_miss_level", "side": side, "level": i + 1})
             elif i >= len(aggr_levels):
                 problems.append({"synopsys": " aggr_miss_level", "side": side, "level": i + 1})
-
+    problems.extend(compare_keys(["open_price",
+                                  "last_price",
+                                  "max_price",
+                                  "min_price",
+                                  "ind_open_price",
+                                  "ind_open_size",
+                                  "ind_open_mid_price"]))
+    
     return problems
 
 
@@ -91,6 +112,13 @@ def compare_aggr_vs_top(aggr_book: dict, top_book: dict):
     else:
         if top_book["bid_real_qty"] != 0 or top_book["bid_impl_qty"] != 0:
             problems.append({"synopsys": "full_miss_level", "side": "bid"})
+    problems.extend(compare_keys(["open_price",
+                                  "last_price",
+                                  "max_price",
+                                  "min_price",
+                                  "ind_open_price",
+                                  "ind_open_size",
+                                  "ind_open_mid_price"]))
     return problems
 
 
@@ -131,6 +159,13 @@ def compare_full_vs_top(full_book: dict, top_book: dict):
     else:
         if top_book["bid_real_qty"] != 0:
             problems.append({"synopsys": "full_miss_level", "side": "bid"})
+    problems.extend(compare_keys(["open_price",
+                                  "last_price",
+                                  "max_price",
+                                  "min_price",
+                                  "ind_open_price",
+                                  "ind_open_size",
+                                  "ind_open_mid_price"]))
     return problems
 
 
