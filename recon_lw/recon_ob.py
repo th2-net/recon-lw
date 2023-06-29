@@ -751,7 +751,7 @@ def display_l2(order_book):
               "price", "real_qty", "impl_qty", "real_num_orders", "impl_num_orders"]
     result = [[f'bid_{header[i]}' if i < 5 else f'ask_{header[i]}' for i in range(len(header))]]
     levels = max(len(order_book["bid_aggr"]), len(order_book["ask_aggr"]))
-    keys = ["bid_aggr","bid_aggr"]
+    keys = ["bid_aggr","ask_aggr"]
     shifts = [0,5]
     for i in range(levels):
         line = []
