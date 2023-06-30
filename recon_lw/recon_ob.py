@@ -381,31 +381,38 @@ def ob_delete_order(order_id: str, str_time_of_event, order_book: dict) -> tuple
     return {}, log
 
 
-def ob_trade_order(order_id: str, traded_size: int, str_time_of_event, order_book: dict) -> tuple:
+def ob_trade_order(order_id: str, traded_price: float, traded_size: int, str_time_of_event, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
         reset_aggr_seq(order_book)
 
-    old_side, old_price, old_size = find_order_position(order_id, order_book)
-    log = []
-    if old_side is None:
-        return {"error": order_id + " not found"}, []
-    if traded_size > old_size:
-        return {"error": "traded size > resting size"}, []
-    elif traded_size == old_size:
-        reflect_price_update_in_version(old_side, old_price, str_time_of_event,order_book)
-        order_book[old_side][old_price].pop(order_id)
-        if len(order_book[old_side][old_price]) == 0:
-            order_book[old_side].pop(old_price)
-            log.append(copy.deepcopy(order_book))
+    errors = process_trade(traded_price, order_book)
+    update_time_and_version(str_time_of_event, order_book)
+    order_book["aggr_seq"]["limit_delta"] = 1
+    order_book["aggr_seq"]["top_delta"] = 1
+
+    if order_id is not None:
+        old_side, old_price, old_size = find_order_position(order_id, order_book)
+        log = []
+        if old_side is None:
+            return {"error": order_id + " not found"}, []
+        if traded_size > old_size:
+            return {"error": "traded size > resting size"}, []
+        elif traded_size == old_size:
+            order_book[old_side][old_price].pop(order_id)
+            if len(order_book[old_side][old_price]) == 0:
+                order_book[old_side].pop(old_price)
+                log.append(copy.deepcopy(order_book))
+            else:
+                log.append(copy.deepcopy(order_book))
         else:
+            order_book[old_side][old_price][order_id] -= traded_size
             log.append(copy.deepcopy(order_book))
+        return errors, log
     else:
-        reflect_price_update_in_version(old_side, old_price, str_time_of_event ,order_book)
-        order_book[old_side][old_price][order_id] -= traded_size
-        log.append(copy.deepcopy(order_book))
-    return {}, log
+        return errors, [copy.deepcopy(order_book)]
+
 
 
 def ob_clean_book(str_time_of_event, order_book: dict) -> tuple:
@@ -594,12 +601,7 @@ def ob_top_clean_book(str_time_of_event, order_book: dict) -> tuple:
     return {}, [copy.deepcopy(order_book)]
 
 
-def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict):
-    if "aggr_seq" not in order_book:
-        init_aggr_seq(order_book)
-    else:
-        reset_aggr_seq(order_book)
-
+def process_trade(trade_price: float, order_book: dict):
     errors = {}
     if "max_price" not in order_book or order_book["max_price"] is None:
         order_book["max_price"] = trade_price
@@ -620,10 +622,20 @@ def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict
         order_book["total_n_trades"] = 1
     else:
         order_book["total_n_trades"] += 1
+    return errors
+
+
+def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict):
+    if "aggr_seq" not in order_book:
+        init_aggr_seq(order_book)
+    else:
+        reset_aggr_seq(order_book)
+
+    errors = process_trade(trade_price, order_book)
 
     update_time_and_version(str_time_of_event, order_book)
-    order_book["aggr_seq"]["top_delta"] = 0
-    order_book["aggr_seq"]["limit_delta"] = 0
+    order_book["aggr_seq"]["top_delta"] = 1
+    order_book["aggr_seq"]["limit_delta"] = 1
 
     return errors, [copy.deepcopy(order_book)]
 
