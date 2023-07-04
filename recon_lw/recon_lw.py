@@ -283,6 +283,10 @@ def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_
 
 
 def protocol(m):
+    if "body" not in m:
+        #simplified message
+        return m["protocol"]
+    
     if len(m["body"]) == 0:
         return "error"
     if "protocol" not in m["body"]["metadata"]:
