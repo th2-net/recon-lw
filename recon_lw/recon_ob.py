@@ -783,8 +783,10 @@ def display_l3(order_book):
     result = [header]
     bid_prices = list(order_book["bid"])
     bid_prices.sort()
-    bid_items = [[p, q, o_id] for p in bid_prices for o_id,q in order_book["bid"][p].items()]
-    ask_items = [[p, q, o_id] for p in bid_prices for o_id,q in order_book["ask"][p].items()]
+    ask_prices = list(order_book["ask"])
+    ask_prices.sort()
+    bid_items = [[p, q, o_id] for p in bid_prices for o_id, q in order_book["bid"][p].items()]
+    ask_items = [[p, q, o_id] for p in ask_prices for o_id, q in order_book["ask"][p].items()]
     levels = max(len(bid_items), len(ask_items))
     for i in range(levels):
         line = []
