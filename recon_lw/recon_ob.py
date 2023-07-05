@@ -106,6 +106,18 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
         dbg_event["attachedMessageIds"].append(tupl[2]["messageId"])
     events.append(dbg_event)
 
+    # update otv (order time version)
+    orders_versions = {}
+    for ob in obs:
+        if "order_id" in ob["operation_params"]:
+            ver = 0
+            order_id = ob["operation_params"]["order_id"] 
+            if order_id in orders_versions:
+                ver = orders_versions[order_id]+1
+            ob["otv"] = ver
+            orders_versions[order_id] = ver
+
+
     if len(obs) > 1 and aggregate_batch_updates:
         top_not_affected = True #all(ob["aggr_seq"]["top_delta"] == 0 for ob in obs)
         limit_not_affected = True #all(ob["aggr_seq"]["limit_delta"] == 0 for ob in obs)

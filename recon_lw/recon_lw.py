@@ -7,6 +7,15 @@ from os import path
 from recon_lw.EventsSaver import EventsSaver
 
 
+def epoch_nano_str_to_ts(s_nanos):
+    nanos = int(s_nanos)
+    return {"epochSecond": nanos // 1e9, "nano": nanos % 1e9}
+
+
+def ts_to_epoch_nano_str(ts):
+    return f'{ts["epochSecond"]}{str(ts["nano"]).zfill(9)}'
+
+
 def time_stamp_key(ts):
     nanos_str = str(ts["nano"]).zfill(9)
     return str(ts["epochSecond"]) + "." + nanos_str
