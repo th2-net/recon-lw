@@ -164,7 +164,7 @@ def ts_from_tag_val(tag_val):
 def oe_er_key_ts_new_key_extract(er):
     if er["messageType"] != "ExecutionReport":
         return None, None, None
-    mm = message_utils.message_to_dict(m)
+    mm = message_utils.message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         if mm["ExecType"] in ["6","8","E", "H"]:
             return None, None, None

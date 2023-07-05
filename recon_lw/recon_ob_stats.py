@@ -121,7 +121,7 @@ def get_search_stats_ts_key(m, settings):
         return None, None
 
     mm = message_utils.message_to_dict(m)
-    return epoch_nano_str_to_ts(mm["TimeOfEvent"]),  mm["TradableInstrumentID"]
+    return recon_lw.recon_lw.epoch_nano_str_to_ts(mm["TimeOfEvent"]),  mm["TradableInstrumentID"]
     # epoch_nano_str_to_ts is in recon_ob_stats module
 
 
