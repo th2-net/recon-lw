@@ -7,10 +7,6 @@ from recon_lw.EventsSaver import EventsSaver
 from recon_lw.LastStateMatcher import LastStateMatcher
 from th2_data_services.utils.message_utils import message_utils
 
-def epoch_nano_str_to_ts(s_nanos):
-    nanos = int(s_nanos)
-    return {"epochSecond": nanos // 1e9, "nano": nanos % 1e9}
-
 
 def ob_compare_stats_get_state_ts_key_order(o, settings):
     if "eventId" not in o:
@@ -19,7 +15,7 @@ def ob_compare_stats_get_state_ts_key_order(o, settings):
     if o["body"]["sessionId"] != settings["top_session"]:
         return None, None, None
 
-    return epoch_nano_str_to_ts(o["body"]["time_of_event"]), o["body"]["book_id"], o["body"]["v"]
+    return recon_lw.epoch_nano_str_to_ts(o["body"]["time_of_event"]), o["body"]["book_id"], o["body"]["v"]
 
 
 def ob_compare_stats_interpret(match, custom_settings, create_event, save_events):
