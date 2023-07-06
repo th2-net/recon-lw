@@ -94,7 +94,8 @@ class LastStateMatcher:
                     ts2 = records_times[i-1]
                     sti = self._state_time_index.bisect_key_left(recon_lw.time_stamp_key(ts2) + "_" + key1)
                     o2 = self._state_time_index[sti][3]
-            self._interpret_func([o1,o2], self._custom_settings, self._create_event, self._send_events)
+            tech = {"key1" :key1, "ts1": ts1,"state_cache": self._state_cache.get(key1)}
+            self._interpret_func([o1, o2, tech], self._custom_settings, self._create_event, self._send_events)
 
         if horizon_time is not None:
             edge_timestamp = {"epochSecond": horizon_time["epochSecond"] - self._horizon_delay_seconds,

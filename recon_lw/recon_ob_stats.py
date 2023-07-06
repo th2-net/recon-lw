@@ -6,6 +6,7 @@ from recon_lw import recon_lw
 from recon_lw.EventsSaver import EventsSaver
 from recon_lw.LastStateMatcher import LastStateMatcher
 from th2_data_services.utils.message_utils import message_utils
+import copy
 
 
 def ob_compare_stats_get_state_ts_key_order(o, settings):
@@ -23,7 +24,8 @@ def ob_compare_stats_interpret(match, custom_settings, create_event, save_events
         error_event = create_event("StatsNotFound" + match[0]["messageType"],
                                    "StatsNotFound",
                                    False,
-                                   {"stats_message": match[0]})
+                                   {"stats_message": match[0],
+                                    "tech": copy.deepcopy(match[2])})
         error_event["attachedMessageIds"] = [match[0]["messageId"]]
         save_events([error_event])
         return
