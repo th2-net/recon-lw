@@ -349,6 +349,10 @@ def ob_update_order(order_id: str, price: float, size: int, str_time_of_event, o
     if old_side is None:
         return {"error": order_id + " not found"}, []
 
+    if price == old_price and size == old_size:
+        return {"error": "order update to identical parameters"}, []
+
+
     log = []
     if price == old_price:
         order_book[old_side][old_price][order_id] = size
