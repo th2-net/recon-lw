@@ -67,24 +67,26 @@ class StateSequenceGenerator:
             tss.sort()
             for ts_key in tss:
                 for chain_key, o_lst in arranged[ts_key].items():
-                    if chain_key not in self._state_cache:
-                        self._state_cache[chain_key] = {"no_state": True}
-                    current_state = self._state_cache[chain_key]
+                    if len(o_lst) == 0:
+                        continue
+                    first_key = o_lst[0][1]
+                    if first_key not in self._state_cache:
+                        self._state_cache[first_key] = {"no_state": True}
+                    current_state = self._state_cache[first_key]
                     updates_states = []
                     for o, key, new_key in o_lst:
                         updates_states.append((o,copy.deepcopy(current_state)))
                         self._state_update(o, current_state, self._create_event, self._send_events)
-                    if len(o_lst) > 0:
-                        last_new_key = o_lst[-1][2]
-                        if last_new_key is not None and last_new_key != chain_key:
-                            self._state_cache[last_new_key] = self._state_cache.pop(chain_key)
-                        if self._debug:
-                            body = {"ts_key" : ts_key, "chain_key": chain_key, "last_new_key": last_new_key, "stream": stream}
-                            body["all_keys"] = {item[1] for item in o_lst}
-                            body["all_new_keys"] = {item[2] for item in o_lst}
-                            body["o_list"] = o_lst
-                            ev = self._create_event("SSGDebug", "SSGDebug", True, body)
-                            self._send_events([ev])
+                    last_new_key = o_lst[-1][2]
+                    if last_new_key is not None and last_new_key != chain_key:
+                        self._state_cache[last_new_key] = self._state_cache.pop(chain_key)
+                    if self._debug:
+                        body = {"ts_key" : ts_key, "chain_key": chain_key, "last_new_key": last_new_key, "stream": stream}
+                        body["all_keys"] = {item[1] for item in o_lst}
+                        body["all_new_keys"] = {item[2] for item in o_lst}
+                        body["o_list"] = o_lst
+                        ev = self._create_event("SSGDebug", "SSGDebug", True, body)
+                        self._send_events([ev])
 
                     self._report_images(updates_states, self._create_event, self._send_events)
         
