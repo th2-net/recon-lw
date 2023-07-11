@@ -79,7 +79,7 @@ class StateSequenceGenerator:
                         self._state_update(o, current_state, self._create_event, self._send_events)
                     last_new_key = o_lst[-1][2]
                     if last_new_key is not None and last_new_key != chain_key:
-                        self._state_cache[last_new_key] = self._state_cache.pop(chain_key)
+                        self._state_cache[last_new_key] = self._state_cache.pop(first_key)
                     if self._debug:
                         body = {"ts_key" : ts_key, "chain_key": chain_key, "last_new_key": last_new_key, "stream": stream}
                         body["all_keys"] = {item[1] for item in o_lst}
