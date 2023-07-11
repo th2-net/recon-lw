@@ -60,7 +60,7 @@ class StateSequenceGenerator:
                     if key not in arranged[ts_key]:
                         arranged[ts_key][chained_key] = [(o, key, new_key)]
                     else:
-                        arranged[ts_key][chained_key].append(o, key, new_key)
+                        arranged[ts_key][chained_key].append((o, key, new_key))
                 processed += 1
 
             tss = list(arranged.keys())
