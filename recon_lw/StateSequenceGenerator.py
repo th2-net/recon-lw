@@ -24,7 +24,7 @@ class StateSequenceGenerator:
         self._send_events = send_events
         self._horizon_delay_seconds = horizon_delay_seconds
         self._custom_settings = custom_settings
-        self._debug = False
+        self._debug = True
 
     def process_objects_batch(self, batch: list) -> None:
         current_ts = None
@@ -41,7 +41,7 @@ class StateSequenceGenerator:
         self.process_streams(current_ts)
     
     def process_streams(self, current_ts):
-        for stream_cache in self._streams.values():
+        for stream, stream_cache in self._streams.items():
             next_chunk = stream_cache.get_next_chunk(current_ts)
             processed = 0
             arranged = {}
@@ -78,7 +78,16 @@ class StateSequenceGenerator:
                         last_new_key = o_lst[-1][2]
                         if last_new_key is not None and last_new_key != chain_key:
                             self._state_cache[last_new_key] = self._state_cache.pop(chain_key)
+                        if self._debug:
+                            body = {"ts_key" : ts_key, "chain_key": chain_key, "last_new_key": last_new_key, "stream": stream}
+                            body["all_keys"] = {item[1] for item in o_lst}
+                            body["all_new_keys"] = {item[2] for item in o_lst}
+                            body["o_list"] = o_lst
+                            ev = self._create_event("SSGDebug", "SSGDebug", True, body)
+                            self._send_events([ev])
+
                     self._report_images(updates_states, self._create_event, self._send_events)
+        
             stream_cache.clear_processed_chunk(processed)
 
 
