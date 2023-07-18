@@ -329,7 +329,7 @@ def ob_add_order(order_id: str, price: float, size: int, side: str, str_time_of_
         reset_aggr_seq(order_book)
 
     if find_order_position(order_id, order_book)[0] is not None:
-        return {"error": order_id + " already exists"}, []
+        return {"error": "Order already exists in book"}, []
     if price not in order_book[side]:
         order_book[side][price] = {order_id: size}
     else:
