@@ -90,14 +90,14 @@ def process_oe_md_comparison(ob_events_path, oe_images_events_path, md_sessions_
 
 
 def oe_ob_get_timestamp_key1_key2(o, custom_settings):
-    if o["eventTyoe"] == "OrderBook":
+    if o["eventType"] == "OrderBook":
         if "order_id" in o["body"]["operation_params"]:
             str_toe = o["body"]["operation_params"]["str_time_of_event"]
             ts = recon_lw.epoch_nano_str_to_ts(str_toe)
             return ts, f'{str_toe}.{o["body"]["operation_params"]["order_id"]}.{o["body"]["otv"]}', None
         else:
             return None, None, None
-    elif o["eventTyoe"] == "OEMDImage":
+    elif o["eventType"] == "OEMDImage":
         is_book_open = custom_settings["is_book_open"]
         str_toe = o["body"]["operation_params"]["str_time_of_event"]
         ts = recon_lw.epoch_nano_str_to_ts(str_toe)
