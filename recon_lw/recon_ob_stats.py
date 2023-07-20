@@ -25,6 +25,7 @@ def ob_compare_stats_interpret(match, custom_settings, create_event, save_events
                                    "StatsNotFound",
                                    False,
                                    {"stats_message": match[0],
+                                    "book_id": match[2]['key1'],
                                     "tech": copy.deepcopy(match[2])})
         error_event["attachedMessageIds"] = [match[0]["messageId"]]
         save_events([error_event])
@@ -48,6 +49,7 @@ def ob_compare_stats_interpret(match, custom_settings, create_event, save_events
                                 "StatsCheck",
                                 len(fails) == 0,
                                 {"stats_message": match[0],
+                                 "book_id": match[2]['key1'],
                                  "order_book": match[1]["body"],
                                  "fails": fails})
     result_event["attachedMessageIds"] = [match[0]["messageId"]]
