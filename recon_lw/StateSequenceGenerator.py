@@ -57,7 +57,7 @@ class StateSequenceGenerator:
                         chained_key = chains[key]                        
                     if new_key is not None and new_key != key:
                         chains[new_key] = chained_key
-                    if key not in arranged[ts_key]:
+                    if chained_key not in arranged[ts_key]:
                         arranged[ts_key][chained_key] = [(o, key, new_key)]
                     else:
                         arranged[ts_key][chained_key].append((o, key, new_key))
