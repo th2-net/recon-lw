@@ -1,6 +1,7 @@
 import pathlib
 from datetime import datetime
 from itertools import islice
+import string
 
 from recon_lw import recon_lw
 from recon_lw.EventsSaver import EventsSaver
@@ -57,7 +58,10 @@ def process_oe_md_comparison(ob_events_path, oe_images_events_path, md_sessions_
     root_event = events_saver.create_event("recon_lw_oe_ob_compare" + datetime.now().isoformat(), "Microservice")
     events_saver.save_events([root_event])
     
-    create_event = lambda n, t, ok, b: events_saver.create_event(n, t, ok, b, parentId=root_event["eventId"])
+    def create_event(n, t, ok, b, am=None):
+        return events_saver.create_event(n, t, ok, b, parentId=root_event["eventId"], attached_messages=am)
+
+    #create_event = lambda n, t, ok, b: events_saver.create_event(n, t, ok, b, parentId=root_event["eventId"])
     save_events = lambda ev_batch: events_saver.save_events(ev_batch)
     processor = TimeCacheMatcher(horizon_delay_seconds,
                                  oe_ob_get_timestamp_key1_key2,
@@ -66,8 +70,9 @@ def process_oe_md_comparison(ob_events_path, oe_images_events_path, md_sessions_
                                  create_event,
                                  save_events)
     
+    data_filter = lambda e: e['body'] and e['body'].get("timestamp", -1) != -1
     streams = recon_lw.open_scoped_events_streams(ob_events_path, lambda n: any(s in n for s in md_sessions_list))
-    streams2 = recon_lw.open_scoped_events_streams(oe_images_events_path)
+    streams2 = recon_lw.open_scoped_events_streams(oe_images_events_path, data_filter=data_filter)
     for elem in streams2:
         streams.add(elem)
 
@@ -85,14 +90,14 @@ def process_oe_md_comparison(ob_events_path, oe_images_events_path, md_sessions_
 
 
 def oe_ob_get_timestamp_key1_key2(o, custom_settings):
-    if o["eventTyoe"] == "OrderBook":
+    if o["eventType"] == "OrderBook":
         if "order_id" in o["body"]["operation_params"]:
             str_toe = o["body"]["operation_params"]["str_time_of_event"]
             ts = recon_lw.epoch_nano_str_to_ts(str_toe)
             return ts, f'{str_toe}.{o["body"]["operation_params"]["order_id"]}.{o["body"]["otv"]}', None
         else:
             return None, None, None
-    elif o["eventTyoe"] == "OEMDImage":
+    elif o["eventType"] == "OEMDImage":
         is_book_open = custom_settings["is_book_open"]
         str_toe = o["body"]["operation_params"]["str_time_of_event"]
         ts = recon_lw.epoch_nano_str_to_ts(str_toe)
@@ -102,9 +107,17 @@ def oe_ob_get_timestamp_key1_key2(o, custom_settings):
     else:
         return None, None, None
 
+def clear_bookid(book_id):
+    book_id = book_id.split("(", maxsplit=1)[0]
+    return book_id
+
 def oe_ob_interpret_func(match, custom_settings, create_event, send_events):
+    attached_messages = []
     if match[0] is not None and match[1] is not None:
         operation_problem = None
+        book_id = clear_bookid(match[0]['body']['book_id'])
+        match[0]['body']['book_id'] = book_id
+        match[0]['body']['operation_params']['instr'] = book_id
         if match[0]["body"]["operation"] != match[1]["body"]["operation"]:
             operation_problem = f'{match[0]["body"]["operation"]} != {match[1]["body"]["operation"]}'
         comparison = recon_ob_cross_stream.compare_keys(match[1]["body"]["operation_params"].keys(),
@@ -125,15 +138,19 @@ def oe_ob_interpret_func(match, custom_settings, create_event, send_events):
         body = {"md": match[0]["body"], "oe": match[1]["body"]}
         if not ok:
             body["problems"] = problems
-        ev =  create_event("OEMDMatch", "OEMDMatch", ok, body)
+        attached_messages.extend(match[0]['attachedMessageIds'])
+        attached_messages.extend(match[1]['attachedMessageIds'])
+        ev =  create_event("OEMDMatch", "OEMDMatch", ok, body, attached_messages)
         send_events([ev])
     elif match[0] is None:
         body = {"oe": match[1]["body"]}
-        ev =  create_event("OEMDMissingMD", "OEMDMissingMD", False, body)
+        attached_messages.extend(match[1]['attachedMessageIds'])
+        ev =  create_event("OEMDMissingMD", "OEMDMissingMD", False, body, attached_messages)
         send_events([ev])
     else:
         body = {"md": match[0]["body"]}
-        ev =  create_event("OEMDMissingOE", "OEMDMissingOE", ok, body)
+        attached_messages.extend(match[0]['attachedMessageIds'])
+        ev =  create_event("OEMDMissingOE", "OEMDMissingOE", False, body, attached_messages)
         send_events([ev])
 
 
