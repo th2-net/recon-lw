@@ -30,7 +30,7 @@ def compare_keys(keys_collection, book1, book2):
             problems.append({"mismatch_key": k, "1": book1[k], "2": None})
             continue
         if book1[k] != book2[k]:
-            problems.append({"mismatch_key": k, "1": book1[k], "2": None})
+            problems.append({"mismatch_key": k, "1": book1[k], "2": book2[k]})
     return problems
 
 
