@@ -303,7 +303,7 @@ def protocol(m):
     return m["body"]["metadata"]["protocol"]
 
 
-def open_scoped_events_streams(streams_path, name_filter=None):
+def open_scoped_events_streams(streams_path, name_filter=None, data_filter=None):
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
     files = listdir(streams_path)
     files.sort()
@@ -319,6 +319,8 @@ def open_scoped_events_streams(streams_path, name_filter=None):
         else:
             scopes_streams[scope] += Data.from_cache_file(path.join(streams_path, f))
     for strm in scopes_streams.values():
+        if data_filter:
+            strm = strm.filter(data_filter)
         ts0 = {"epochSecond": 0, "nano": 0}
         streams.add((ts0, iter(strm), None))
     return streams
