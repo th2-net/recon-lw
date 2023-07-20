@@ -150,7 +150,7 @@ def oe_ob_interpret_func(match, custom_settings, create_event, send_events):
     else:
         body = {"md": match[0]["body"]}
         attached_messages.extend(match[0]['attachedMessageIds'])
-        ev =  create_event("OEMDMissingOE", "OEMDMissingOE", ok, body, attached_messages)
+        ev =  create_event("OEMDMissingOE", "OEMDMissingOE", False, body, attached_messages)
         send_events([ev])
 
 
