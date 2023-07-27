@@ -176,7 +176,7 @@ def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
 
 
 #{"first_key_func":..., "second_key_func",... "interpret_func"}
-def execute_standalone(message_pickle_path, sessions_list, result_events_path, rules_settings_dict):
+def execute_standalone(message_pickle_path, sessions_list, result_events_path, rules_settings_dict, data_objects=None):
     events_buffer = []
     box_ts = datetime.now()
     events_saver = EventsSaver(result_events_path)
@@ -196,12 +196,15 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
         rule_settings["init_func"](rule_settings)
 
     events_saver.save_events([r["rule_root_event"] for r in rules_settings_dict.values()])
-    if sessions_list is not None and len(sessions_list):
-        sessions_set = set(sessions_list)
-        streams = open_streams(message_pickle_path,
-                               lambda n: n[:n.rfind('_')] in sessions_set)
+    if data_objects:
+        streams = open_streams(message_pickle_path, data_objects=data_objects)
     else:
-        streams = open_streams(message_pickle_path)
+        if sessions_list is not None and len(sessions_list):
+            sessions_set = set(sessions_list)
+            streams = open_streams(message_pickle_path,
+                                lambda n: n[:n.rfind('_')] in sessions_set)
+        else:
+            streams = open_streams(message_pickle_path)
 
     message_buffer = [None]*100
     buffer_len = 100
@@ -326,21 +329,27 @@ def open_scoped_events_streams(streams_path, name_filter=None, data_filter=None)
     return streams
 
 
-def open_streams(streams_path, name_filter=None, expanded_messages=False):
+def open_streams(streams_path, name_filter=None, expanded_messages=False, data_objects=None):
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
-    files = listdir(streams_path)
-    for f in files:
-        if ".pickle" not in f:
-            continue
-        if name_filter is not None and not name_filter(f):
-            continue
-        data_object = Data.from_cache_file(path.join(streams_path, f))
-        if expanded_messages:
-            stream = (mm for m in data_object for mm in message_utils.expand_message(m))
-        else:
-            stream = Data.from_cache_file(path.join(streams_path, f))
-        ts0 = {"epochSecond": 0, "nano": 0}
-        streams.add((ts0, iter(stream), None))
+    
+    if data_objects:
+        for stream in data_objects:
+            ts0 = {"epochSecond": 0, "nano": 0}
+            streams.add((ts0, iter(stream), None))
+    else:
+        files = listdir(streams_path)
+        for f in files:
+            if ".pickle" not in f:
+                continue
+            if name_filter is not None and not name_filter(f):
+                continue
+            data_object = Data.from_cache_file(path.join(streams_path, f))
+            if expanded_messages:
+                stream = (mm for m in data_object for mm in message_utils.expand_message(m))
+            else:
+                stream = Data.from_cache_file(path.join(streams_path, f))
+            ts0 = {"epochSecond": 0, "nano": 0}
+            streams.add((ts0, iter(stream), None))
 
     return streams
 
