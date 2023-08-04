@@ -75,8 +75,8 @@ class StateSequenceGenerator:
                     current_state = self._state_cache[first_key]
                     updates_states = []
                     for o, key, new_key in o_lst:
-                        updates_states.append((o,copy.deepcopy(current_state)))
                         self._state_update(o, current_state, self._create_event, self._send_events)
+                        updates_states.append((o,copy.deepcopy(current_state)))
                     last_new_key = o_lst[-1][2]
                     if last_new_key is not None and last_new_key != chain_key:
                         self._state_cache[last_new_key] = self._state_cache.pop(first_key)

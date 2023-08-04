@@ -9,7 +9,7 @@ from recon_lw.EventsSaver import EventsSaver
 
 def epoch_nano_str_to_ts(s_nanos):
     nanos = int(s_nanos)
-    return {"epochSecond": nanos // 1e9, "nano": nanos % 1e9}
+    return {"epochSecond": nanos // 1_000_000_000, "nano": nanos % 1_000_000_000}
 
 
 def ts_to_epoch_nano_str(ts):
