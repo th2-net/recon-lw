@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Union
 from sortedcontainers import SortedKeyList
 from th2_data_services.data import Data
 from th2_data_services.utils.message_utils import message_utils
@@ -271,8 +272,9 @@ def load_to_list(messages, simplify):
         return list(messages)
 
 
-def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_list, simplify=True):
-    messages = Data.from_cache_file(message_pickle_path)
+def split_messages_for_recons(messages: Union[Data, str], output_path, sessions_list, simplify=True):
+    if not isinstance(messages, Data):
+        messages = Data.from_cache_file(messages)
     for s in sessions_list:
         messages_session_in = messages.filter(lambda m: m["sessionId"] == s and m["direction"] == "IN")
         print("Sorting ", s, " IN ", datetime.now())
