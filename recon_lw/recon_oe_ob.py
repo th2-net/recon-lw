@@ -11,17 +11,20 @@ from th2_data_services.utils.message_utils import message_utils
 from recon_lw.StateSequenceGenerator import StateSequenceGenerator
 
 
-def process_order_states(message_pickle_path, sessions_list, result_events_path, settings):
+def process_order_states(message_pickle_path, sessions_list, result_events_path, settings, data_objects=None):
     events_saver = EventsSaver(result_events_path)
     root_event = events_saver.create_event("recon_lw_oe_ob_order_states_images " + datetime.now().isoformat(), "Microservice")
     events_saver.save_events([root_event])
 
-    if sessions_list is not None and len(sessions_list):
-        sessions_set = set(sessions_list)
-        streams = recon_lw.open_streams(message_pickle_path,
-                               lambda n: n[:n.rfind('_')] in sessions_set)
+    if data_objects:
+        streams = recon_lw.open_streams(None, data_objects=data_objects)
     else:
-        streams = recon_lw.open_streams(message_pickle_path)
+        if sessions_list is not None and len(sessions_list):
+            sessions_set = set(sessions_list)
+            streams = recon_lw.open_streams(message_pickle_path,
+                                lambda n: n[:n.rfind('_')] in sessions_set)
+        else:
+            streams = recon_lw.open_streams(message_pickle_path)
 
     create_event = lambda n, t, ok, b: events_saver.create_event(n, t, ok, b, parentId=root_event["eventId"])
     save_events = lambda ev_batch: events_saver.save_events(ev_batch)
@@ -53,7 +56,7 @@ def oe_er_state_update(er, current_state, create_event, send_events):
 
 
 def process_oe_md_comparison(ob_events_path, oe_images_events_path, md_sessions_list, result_events_path,
-                              horizon_delay_seconds, is_book_open):
+                              horizon_delay_seconds, is_book_open, keeper):
     events_saver = EventsSaver(result_events_path)
     root_event = events_saver.create_event("recon_lw_oe_ob_compare" + datetime.now().isoformat(), "Microservice")
     events_saver.save_events([root_event])
@@ -66,7 +69,7 @@ def process_oe_md_comparison(ob_events_path, oe_images_events_path, md_sessions_
     processor = TimeCacheMatcher(horizon_delay_seconds,
                                  oe_ob_get_timestamp_key1_key2,
                                  oe_ob_interpret_func,
-                                 {"is_book_open": is_book_open},
+                                 {"is_book_open": is_book_open, "orders_keeper": keeper},
                                  create_event,
                                  save_events)
     
@@ -90,11 +93,16 @@ def process_oe_md_comparison(ob_events_path, oe_images_events_path, md_sessions_
 
 
 def oe_ob_get_timestamp_key1_key2(o, custom_settings):
+    keeper = custom_settings['orders_keeper']
     if o["eventType"] == "OrderBook":
         if "order_id" in o["body"]["operation_params"]:
+            order_id = o["body"]["operation_params"]["order_id"]
+            if order_id and int(order_id) not in keeper:
+                # Exclude orders from unknown users
+                return None, None, None
             str_toe = o["body"]["operation_params"]["str_time_of_event"]
             ts = recon_lw.epoch_nano_str_to_ts(str_toe)
-            return ts, f'{str_toe}.{o["body"]["operation_params"]["order_id"]}.{o["body"]["otv"]}', None
+            return ts, f'{str_toe}.{order_id}.{o["body"]["otv"]}', None
         else:
             return None, None, None
     elif o["eventType"] == "OEMDImage":
