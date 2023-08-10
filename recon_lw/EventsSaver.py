@@ -10,6 +10,7 @@ class EventsSaver:
         self._scopes_buffers = {}
         self._path = path
 
+
     def flush(self):
         for scope in self._scopes_buffers.keys():
             self.flush_scope(scope)
@@ -30,7 +31,7 @@ class EventsSaver:
             if len(self._scopes_buffers[scope]) > 50000:
                 self.flush_scope(scope)
 
-    def create_event(self, name, type, ok=True, body=None, parentId=None, attached_messages=None):
+    def create_event(self, name, type, ok=True, body=None, parentId=None, attached_messages=None, scope = None):
         attached_messages = attached_messages or []
         ts = datetime.now()
         e = {"eventId": self._create_event_id(),
@@ -41,6 +42,8 @@ class EventsSaver:
              "parentEventId": parentId,
              "startTimestamp": {"epochSecond": int(ts.timestamp()), "nano": ts.microsecond * 1000},
              "attachedMessageIds": attached_messages}
+        if scope is not None:
+            e["scope"] = scope
         return e
 
     def _create_event_id(self):
