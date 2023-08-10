@@ -137,7 +137,7 @@ def flush_old(current_ts, horizon_delay, time_index):
 # match_compare_func takes m1, m2  returns e
 # end_events_func tekes iterable of events
 def rule_flush(current_ts, horizon_delay, match_index, time_index, message_cache,
-               interpret_func, event_sequence, send_events_func, parent_event, live_orders_cache):
+               interpret_func, events_saver: EventsSaver, parent_event, live_orders_cache):
     old_keys = flush_old(current_ts, horizon_delay, time_index)
     events = []
     for k in old_keys:
@@ -154,25 +154,7 @@ def rule_flush(current_ts, horizon_delay, match_index, time_index, message_cache
                 r["parentEventId"] = parent_event["eventId"]
                 events.append(r)
 
-    send_events_func(events)
-
-
-def create_event_id(event_sequence):
-    event_sequence["n"] += 1
-    return event_sequence["name"] + "_" + event_sequence["stamp"] +"-" +str(event_sequence["n"])
-
-
-def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
-    ts = datetime.now()
-    e = {"eventId": create_event_id(event_sequence),
-         "successful": ok,
-         "eventName": name,
-         "eventType": type,
-         "body": body,
-         "parentEventId": parentId,
-         "startTimestamp": {"epochSecond": int(ts.timestamp()),"nano": ts.microsecond*1000},
-         "attachedMessageIds": []}
-    return e
+    events_saver.save_events(events)
 
 
 #{"first_key_func":..., "second_key_func",... "interpret_func"}
@@ -180,13 +162,12 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
     events_buffer = []
     box_ts = datetime.now()
     events_saver = EventsSaver(result_events_path)
-    event_sequence = {"name": "recon_lw", "stamp": str(box_ts.timestamp()), "n": 0}
-    root_event = create_event("recon_lw " + box_ts.isoformat(), "Microservice", event_sequence)
+    #event_sequence = {"name": "recon_lw", "stamp": str(box_ts.timestamp()), "n": 0}
+    root_event = events_saver.create_event("recon_lw " + box_ts.isoformat(), "Microservice")
 
     events_saver.save_events([root_event])
     for rule_key, rule_settings in rules_settings_dict.items():
-        rule_settings["rule_root_event"] = create_event(rule_key, "LwReconRule",
-                                                        event_sequence, parentId=root_event["eventId"])
+        rule_settings["rule_root_event"] = events_saver.create_event(rule_key, "LwReconRule", parentId=root_event["eventId"])
         if "init_func" not in rule_settings:
             rule_settings["init_func"] = init_matcher
         if "collect_func" not in rule_settings:
@@ -213,12 +194,10 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
         for rule_settings in rules_settings_dict.values():
             rule_settings["collect_func"](buffer_to_process, rule_settings)
             ts = buffer_to_process[len(buffer_to_process)-1]["timestamp"]
-            rule_settings["flush_func"](ts, rule_settings, event_sequence,
-                                        lambda ev_batch: events_saver.save_events(ev_batch))
+            rule_settings["flush_func"](ts, rule_settings, events_saver) 
     #final flush
     for rule_settings in rules_settings_dict.values():
-        rule_settings["flush_func"](None, rule_settings, event_sequence,
-                                    lambda ev_batch: events_saver.save_events(ev_batch))
+        rule_settings["flush_func"](None, rule_settings, events_saver)
     #one final flush
     events_saver.flush()
 
@@ -236,15 +215,14 @@ def collect_matcher(batch, rule_settings):
         rule_settings["live_orders_cache"].process_objects_batch(batch)
 
 
-def flush_matcher(ts,rule_settings,event_sequence, save_events_func):
+def flush_matcher(ts,rule_settings, events_saver):
     rule_flush(ts,
                rule_settings["horizon_delay"],
                rule_settings["match_index"],
                rule_settings["time_index"],
                rule_settings["message_cache"],
                rule_settings["interpret_func"],
-               event_sequence,
-               save_events_func,
+               events_saver,
                rule_settings["rule_root_event"],
                rule_settings["live_orders_cache"] if "live_orders_cache" in rule_settings else None)
 

@@ -4,6 +4,7 @@ from th2_data_services.utils.message_utils import message_utils
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
 from recon_lw.SequenceCache import SequenceCache
+from recon_lw.EventsSaver import EventsSaver
 import copy
 
 
@@ -21,19 +22,19 @@ def combine_operations(operations_list):
     return combined_operations
 
 
-def process_operations_batch(operations_batch, events, book_id ,book, check_book_rule,
-                             event_sequence, parent_event,  log_books_filter, log_books_collection,
+def process_operations_batch(operations_batch, book_id ,book, check_book_rule,
+                             parent_event, events_saver : EventsSaver, log_books_filter, log_books_collection,
                              aggregate_batch_updates):
 
     obs = []
-    debug_event = recon_lw.create_event("ROBDebug:" + parent_event["eventName"], "ROBDebug",
-                                          event_sequence,
-                                          ok=False,
-                                          body={"book_id": book_id,
-                                                "operations": [elem[0].__name__ for elem in operations_batch],
-                                                "times": [elem[1]["str_time_of_event"] for elem in operations_batch]},
-                                          parentId=parent_event["eventId"])
-    events.append(debug_event)
+    debug_event = events_saver.create_event("ROBDebug:" + parent_event["eventName"], "ROBDebug",
+                                            ok=False,
+                                            body={"book_id": book_id,
+                                                  "operations": [elem[0].__name__ for elem in operations_batch],
+                                                  "times": [elem[1]["str_time_of_event"] for elem in operations_batch]},
+                                                  parentId=parent_event["eventId"])
+    
+    events_saver.save_events([debug_event])
 
     for operation, parameters, mess in operations_batch:
         initial_book = copy.deepcopy(book)
@@ -53,13 +54,12 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
             result["initial_book"] = initial_book
             result["book_id"] = book_id
             result["sessionId"] = mess["sessionId"]
-            update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
-                                                 event_sequence,
-                                                 ok=False,
-                                                 body=result,
-                                                 parentId=parent_event["eventId"])
-            update_event["attachedMessageIds"] = [mess["messageId"]]
-            events.append(update_event)
+            update_event = events_saver.create_event("UpdateBookError:" + parent_event["eventName"], "UpdateBookError",
+                                                     ok=False,
+                                                     body=result,
+                                                     parentId=parent_event["eventId"],
+                                                     attached_messages=[mess["messageId"]])
+            events_saver.save_events(update_event)
         if log_entries is not None:
             for log_book in log_entries:
                 log_book["timestamp"] = mess["timestamp"]
@@ -71,17 +71,8 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                 if log_books_filter is None or log_books_filter(log_book):
                     log_books_collection.append(log_book)
                     obs.append(log_book)
-                #    log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
-                #                                      "OrderBook",
-                #                                      event_sequence,
-                #                                      ok=True,
-                #                                      body=log_book,
-                #                                      parentId=parent_event["eventId"])
-                #    log_event["attachedMessageIds"] = [mess["messageId"]]
-                #    log_event["scope"] = mess["sessionId"]
-                #    obs.append(log_event)
 
-        results = check_book_rule(book, event_sequence)
+        results = check_book_rule(book, events_saver)
         if results is not None:
             for r in results:
                 if not r["successful"]:
@@ -91,20 +82,19 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                 r["body"]["book_id"] = book_id
                 r["parentEventId"] = parent_event["eventId"]
                 r["attachedMessageIds"] = [mess["messageId"]]
-                events.append(r)
+            events_saver.save_events(results)
 
-    dbg_event = recon_lw.create_event("DebugEvent",
-                                      "DebugEvent",
-                                      event_sequence,
-                                      ok=True,
-                                      body={"operations": [(op[0], op[2]["messageId"]) for op in operations_batch],
-                                            "len(batch)": len(operations_batch),
-                                            "len(obs)": len(obs),
-                                            "book_id": book_id},
-                                      parentId=parent_event["eventId"])
+    dbg_event = events_saver.create_event("DebugEvent",
+                                          "DebugEvent",
+                                          ok=True,
+                                          body={"operations": [(op[0], op[2]["messageId"]) for op in operations_batch],
+                                                "len(batch)": len(operations_batch),
+                                                "len(obs)": len(obs),
+                                                "book_id": book_id},
+                                          parentId=parent_event["eventId"])
     for tupl in operations_batch:
         dbg_event["attachedMessageIds"].append(tupl[2]["messageId"])
-    events.append(dbg_event)
+    events_saver.save_events([dbg_event])
 
     # update otv (order time version)
     orders_versions = {}
@@ -159,20 +149,19 @@ def process_operations_batch(operations_batch, events, book_id ,book, check_book
                 obs[i]["aggr_seq"]["limit_v2"] = -1
 
 
-def process_market_data_update(mess_batch, events,  books_cache, get_book_id_func ,update_book_rule,
-                               check_book_rule, event_sequence, parent_event, initial_book_params, log_books_filter,
+def process_market_data_update(mess_batch, books_cache, get_book_id_func ,update_book_rule,
+                               check_book_rule, initial_book_params, parent_event, events_saver : EventsSaver ,log_books_filter,
                                log_books_collection, aggregate_batch_updates):
     books_updates = {}
     for m in mess_batch:
         book_ids_list, result = get_book_id_func(m)
         if result is not None:
-            book_id_event = recon_lw.create_event("GetBookError:" + parent_event["eventName"], "GetBookError",
-                                                  event_sequence,
+            book_id_event = events_saver.create_event("GetBookError:" + parent_event["eventName"], "GetBookError",
                                                   ok=False,
                                                   body=result,
-                                                  parentId=parent_event["eventId"])
-            book_id_event["attachedMessageIds"] = [m["messageId"]]
-            events.append(book_id_event)
+                                                  parentId=parent_event["eventId"],
+                                                  attached_messages=[m["messageId"]])
+            events_saver.save_events([book_id_event])
         if book_ids_list is not None:
             for book_id in book_ids_list:
                 if book_id not in books_updates:
@@ -192,15 +181,15 @@ def process_market_data_update(mess_batch, events,  books_cache, get_book_id_fun
                 operations.append((op, par, m))
         operations_chunks = combine_operations(operations)
         for chunk in operations_chunks:
-            process_operations_batch(chunk,events,book_id, book, check_book_rule,
-                                     event_sequence, parent_event, log_books_filter,
+            process_operations_batch(chunk,book_id, book, check_book_rule,
+                                     parent_event, events_saver, log_books_filter,
                                      log_books_collection,
                                      aggregate_batch_updates)
 
 
 def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book_id_func,
                      update_book_rule,
-                     check_book_rule, event_sequence: dict, send_events_func, parent_event: dict,
+                     check_book_rule, events_saver : EventsSaver, parent_event: dict,
                      initial_book_params: dict,
                      log_books_filter, aggregate_batch_updates) -> int:
     events = []
@@ -212,31 +201,30 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
         mess = m[1]
         # process gaps TODO better way to add sessionId to gap event
         if "gap" in mess:
-            gap_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"], "SeqGap", event_sequence, ok=False,
-                                              body={"seq_num": seq, "sessionId":messages_chunk[0]['sessionId']}, parentId=parent_event["eventId"])
+            gap_event = events_saver.create_event("SeqGap:" + parent_event["eventName"], "SeqGap", ok=False,
+                                                  body={"seq_num": seq, "sessionId":messages_chunk[0]['sessionId']}, parentId=parent_event["eventId"])
             events.append(gap_event)
             n_processed += 1
             continue
         messages_chunk.extend(message_utils.expand_message(mess))
         n_processed += 1
 
-    process_market_data_update(messages_chunk, events, books_cache, get_book_id_func, update_book_rule,
-                               check_book_rule, event_sequence, parent_event, initial_book_params,
+    process_market_data_update(messages_chunk, books_cache, get_book_id_func, update_book_rule,
+                               check_book_rule, parent_event, events_saver, initial_book_params,
                                log_books_filter,log_books_collection, aggregate_batch_updates)
 
     log_books_collection.sort(key=lambda d: recon_lw.time_stamp_key(d["timestamp"]))
     for log_book in log_books_collection:
-        log_event = recon_lw.create_event("OrderBook:" + log_book["sessionId"],
-                                          "OrderBook",
-                                          event_sequence,
-                                          ok=True,
-                                          body=log_book,
-                                          parentId=parent_event["eventId"])
+        log_event = events_saver.create_event("OrderBook:" + log_book["sessionId"],
+                                              "OrderBook",
+                                              ok=True,
+                                              body=log_book,
+                                              parentId=parent_event["eventId"])
         log_event["attachedMessageIds"] = [log_book["source_msg_id"]]
         log_event["scope"] = log_book["sessionId"]
         events.append(log_event)
 
-    send_events_func(events)
+    events_saver.save_events(events)
     return n_processed
 
 
@@ -266,7 +254,7 @@ def collect_ob_stream(next_batch: list, rule_dict: dict) -> None:
                     raise e
 
 
-def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_events_func) -> None:
+def flush_ob_stream(ts: dict, rule_settings: dict, events_saver : EventsSaver) -> None:
     #seq_batch = flush_sequence_get_collection(ts, rule_settings["horizon_delay"], rule_settings["sequence_cache"])
     seq_batch = rule_settings["sequence_cache"].get_next_chunk(ts)
     n_processed = process_ob_rules(seq_batch,
@@ -274,9 +262,8 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
                                    rule_settings["get_book_id"],
                                    rule_settings["update_book_rule"],
                                    rule_settings["check_book_rule"],
-                                   event_sequence,
-                                   save_events_func,
                                    rule_settings["rule_root_event"],
+                                   events_saver,
                                    rule_settings["initial_book_params"],
                                    rule_settings["log_books_filter"] if "log_books_filter" in rule_settings else None,
                                    rule_settings["aggregate_batch_updates"] if "aggregate_batch_updates" in rule_settings else False)
@@ -287,14 +274,13 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
     dupl_events = []
     for i in range(0, n_dupl):
         item = duplicates.pop(0)
-        d_ev = recon_lw.create_event("Duplicate:" + rule_settings["rule_root_event"]["eventName"], "Duplicate",
-                                     event_sequence,
-                                     ok=False,
-                                     body={"seq_num": item[0], "sessionId": rule_settings["sessionId"]},
-                                     parentId=rule_settings["rule_root_event"]["eventId"])
+        d_ev = events_saver.create_event("Duplicate:" + rule_settings["rule_root_event"]["eventName"], "Duplicate",
+                                         ok=False,
+                                         body={"seq_num": item[0], "sessionId": rule_settings["sessionId"]},
+                                         parentId=rule_settings["rule_root_event"]["eventId"])
         d_ev["attachedMessageIds"] = [item[1]["messageId"], item[2]["messageId"]]
         dupl_events.append(d_ev)
-    save_events_func(dupl_events)
+    events_saver.save_events(dupl_events)
     duplicates.clear()
     rule_settings["sequence_cache"].clear_processed_chunk(n_processed)
     #flush_sequence_clear_cache(n_processed, rule_settings["sequence_cache"])
