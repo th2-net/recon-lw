@@ -146,7 +146,7 @@ def rule_flush(current_ts, horizon_delay, match_index, time_index, message_cache
             #request already processed through different key
             continue
 
-        results = interpret_func([message_cache_pop(item, message_cache) for item in elem],live_orders_cache,event_sequence)
+        results = interpret_func([message_cache_pop(item, message_cache) for item in elem],live_orders_cache,events_saver)
 #       result = interpret_func(message_cache_pop(elem[0], message_cache),
 #                                message_cache_pop(elem[1], message_cache), event_sequence)
         if results is not None:
