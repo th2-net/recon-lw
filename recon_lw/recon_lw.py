@@ -168,6 +168,7 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
     events_saver.save_events([root_event])
     for rule_key, rule_settings in rules_settings_dict.items():
         rule_settings["rule_root_event"] = events_saver.create_event(rule_key, "LwReconRule", parentId=root_event["eventId"])
+        rule_settings["events_saver"] = events_saver
         if "init_func" not in rule_settings:
             rule_settings["init_func"] = init_matcher
         if "collect_func" not in rule_settings:
