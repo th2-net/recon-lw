@@ -5,7 +5,7 @@ from th2_data_services.utils.message_utils import message_utils
 from os import listdir
 from os import path
 from recon_lw.EventsSaver import EventsSaver
-
+from th2_data_services.config import options
 
 def epoch_nano_str_to_ts(s_nanos):
     nanos = int(s_nanos)
@@ -345,7 +345,7 @@ def open_streams(streams_path, name_filter=None, expanded_messages=False, data_o
                 continue
             data_object = Data.from_cache_file(path.join(streams_path, f))
             if expanded_messages:
-                stream = (mm for m in data_object for mm in message_utils.expand_message(m))
+                stream = (mm for m in data_object for mm in options.MESSAGE_FIELDS_RESOLVER.expand_message(m))
             else:
                 stream = Data.from_cache_file(path.join(streams_path, f))
             ts0 = {"epochSecond": 0, "nano": 0}
