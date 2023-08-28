@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+from typing import Iterable, List
+
 from sortedcontainers import SortedKeyList
 from th2_data_services.data import Data
 from th2_data_services.utils.message_utils import message_utils
@@ -255,7 +257,7 @@ def flush_matcher(ts,rule_settings,event_sequence, save_events_func):
 def simplify_message(m):
     mm = m.copy()
     if len(m["body"]) > 0:
-        mm["simpleBody"] = message_utils.message_to_dict(m)  #.message2dict(m)
+        mm["simpleBody"] = message_utils.message_to_dict(m)
         mm["protocol"] = protocol(m)
     else:
         mm["simpleBody"] = {}
@@ -264,7 +266,7 @@ def simplify_message(m):
     return mm
 
 
-def load_to_list(messages, simplify):
+def load_to_list(messages: Iterable[dict], simplify: bool) -> List[dict]:
     if simplify:
         return list(map(simplify_message, messages))
     else:
