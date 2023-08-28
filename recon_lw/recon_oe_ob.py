@@ -1,13 +1,9 @@
-import pathlib
 from datetime import datetime
-from itertools import islice
-import string
-
 from recon_lw import recon_lw
 from recon_lw.EventsSaver import EventsSaver
 from recon_lw import recon_ob_cross_stream
 from recon_lw.TimeCacheMatcher import TimeCacheMatcher
-from th2_data_services.utils.message_utils import message_utils
+from recon_lw.message_utils import message_to_dict
 from recon_lw.StateSequenceGenerator import StateSequenceGenerator
 
 
@@ -182,7 +178,7 @@ def oe_m_stream_sequence_timestamp(m):
     if m["direction"] != "IN":
         return None, None, None
     stream = m["sessionId"]
-    mm = message_utils.message_to_dict(m)
+    mm = message_to_dict(m)
     if "header.MsgSeqNum" in mm:
         return stream, mm["header.MsgSeqNum"], m["timestamp"]
     else:
@@ -201,7 +197,7 @@ def ts_from_tag_val(tag_val):
 def oe_er_key_ts_new_key_extract(er):
     if er["messageType"] != "ExecutionReport":
         return None, None, None
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         if mm["ExecType"] in ["6", "8", "E", "H"]:
             return None, None, None
@@ -227,7 +223,7 @@ def oe_er_key_ts_new_key_extract(er):
 
 
 def get_resting_price(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         return float(mm["Price"])
     else:
@@ -235,7 +231,7 @@ def get_resting_price(er):
 
 
 def get_resting_qty(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         return int(mm["LeavesQty"])
     else:
@@ -243,7 +239,7 @@ def get_resting_qty(er):
 
 
 def get_trade_price(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         return float(mm["LastPx"])
     else:
@@ -251,7 +247,7 @@ def get_trade_price(er):
 
 
 def get_trade_qty(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         return int(mm["LastQty"])
     else:
@@ -259,7 +255,7 @@ def get_trade_qty(er):
 
 
 def get_transact_time(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         return ts_from_tag_val(mm["TransactTime"])
     else:
@@ -267,7 +263,7 @@ def get_transact_time(er):
 
 
 def get_order_type(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         return int(mm["OrdType"])
     else:
@@ -275,7 +271,7 @@ def get_order_type(er):
 
 
 def get_order_status(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         return int(mm["OrdStatus"])
     else:
@@ -283,17 +279,17 @@ def get_order_status(er):
 
 
 def get_instrument_id(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     return mm["SecurityID"]
 
 
 def get_order_id(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     return mm["OrderID"]
 
 
 def get_side(er):
-    mm = message_utils.message_to_dict(er)
+    mm = message_to_dict(er)
     return "bid" if mm["Side"] == 1 else "ask"
 
 
@@ -350,7 +346,7 @@ def oe_report_md_images(update_states, create_event, send_events):
     if len(update_states) == 1:
         er = update_states[0][0]
         prev_state = update_states[0][1]
-        mm_er = message_utils.message_to_dict(er)
+        mm_er = message_to_dict(er)
         if mm_er["ExecType"] == "0" and get_order_type(er) not in ["3", "4"]:
             # new not stop
             ev = report_add_order(er, 0, create_event)
@@ -397,7 +393,7 @@ def oe_report_md_images(update_states, create_event, send_events):
     else:
         first_er = update_states[0][0]
         prev_state = update_states[0][1]
-        mm_er = message_utils.message_to_dict(first_er)
+        mm_er = message_to_dict(first_er)
         if mm_er["ExecType"] == "0":
             # aggressive new
             # skipping trades/ adding only if order is still alive
@@ -444,5 +440,5 @@ def update_states_synopsis(update_states):
 
 
 def get_er_synopsis(er):
-    mm_er = message_utils.message_to_dict(er)
+    mm_er = message_to_dict(er)
     return f'exectype={mm_er["ExecType"]}, orderstatus={get_order_status(er)}'

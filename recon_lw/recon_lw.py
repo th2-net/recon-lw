@@ -3,7 +3,7 @@ from typing import Iterable, List
 
 from sortedcontainers import SortedKeyList
 from th2_data_services.data import Data
-from th2_data_services.utils.message_utils import message_utils
+from recon_lw.message_utils import message_to_dict
 from os import listdir
 from os import path
 from recon_lw.EventsSaver import EventsSaver
@@ -257,7 +257,7 @@ def flush_matcher(ts,rule_settings,event_sequence, save_events_func):
 def simplify_message(m):
     mm = m.copy()
     if len(m["body"]) > 0:
-        mm["simpleBody"] = message_utils.message_to_dict(m)
+        mm["simpleBody"] = message_to_dict(m)
         mm["protocol"] = protocol(m)
     else:
         mm["simpleBody"] = {}
