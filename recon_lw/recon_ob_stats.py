@@ -1,11 +1,9 @@
 import pathlib
 from datetime import datetime
-from itertools import islice
-
 from recon_lw import recon_lw
 from recon_lw.EventsSaver import EventsSaver
 from recon_lw.LastStateMatcher import LastStateMatcher
-from th2_data_services.utils.message_utils import message_utils
+from recon_lw.message_utils import message_to_dict
 import copy
 
 
@@ -128,13 +126,13 @@ def get_search_stats_ts_key(m, settings):
     if m["sessionType"] not in ["TradeStatisticsIntraday", "TradeStatisticsEOD"]:
         return None, None
 
-    mm = message_utils.message_to_dict(m)
+    mm = message_to_dict(m)
     return recon_lw.recon_lw.epoch_nano_str_to_ts(mm["TimeOfEvent"]), mm["TradableInstrumentID"]
     # epoch_nano_str_to_ts is in recon_ob_stats module
 
 
 def get_stats_example(m):
-    mm = message_utils.message_to_dict(m)
+    mm = message_to_dict(m)
     stats = {
         "open_price": mm["OpenPrice"],
         "max_price": mm["TradeHigh"],
