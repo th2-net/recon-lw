@@ -11,12 +11,15 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from th2_data_services.data_source import lwdp
 from th2_data_services.config import options
 from th2_data_services.utils.converters import flatten_dict
 
 
 def message_to_dict(message: dict):
     """Converts message body.fields to flatten dict.
+
+    Expects the message after expand_messages function.
 
     Will return message["simpleBody"] is "simpleBody" in message.
     "simpleBody" -- recon-lw field, that contains flatten dict.
@@ -39,12 +42,8 @@ def message_to_dict(message: dict):
     if "simpleBody" in message:
         return message["simpleBody"]
 
-    # TODO - Will work for old-msgs format, but not for Lwdp-3
-    #   because LwDP3 messages have another structure of the body.
-    #   Body is a list of dicts.
     try:
-        # TODO - it'll bring problems if the message body doesn't have ["fields"].
-        result = flatten_dict(options.MESSAGE_FIELDS_RESOLVER.get_body(message)["fields"])
+        result = flatten_dict(options.smfr.get_fields(options.mfr.get_body(message)))
         return result
     except Exception:
         print(
