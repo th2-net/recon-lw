@@ -1,5 +1,7 @@
 import pathlib
 from datetime import datetime
+from typing import List
+
 from recon_lw import recon_lw
 from recon_lw.EventsSaver import EventsSaver
 from recon_lw.LastStateMatcher import LastStateMatcher
@@ -18,7 +20,7 @@ def ob_compare_stats_get_state_ts_key_order(o, settings):
            o["body"]["v"]
 
 
-def ob_compare_stats_interpret(match, custom_settings, create_event, save_events):
+def ob_compare_stats_interpret(match: List, custom_settings, create_event, save_events):
     if match[1] is None:
         error_event = create_event("StatsNotFound" + match[0]["messageType"],
                                    "StatsNotFound",
@@ -111,6 +113,7 @@ def ob_compare_stats(source_stat_messages_path: pathlib.PosixPath,
 
 
 def get_timestamp(o):
+    # TODO - how it works?? Why do we expect timestamp in body ? -- o["body"]["timestamp"] ?
     if "messageId" in o:
         return o["timestamp"]
     else:
@@ -127,7 +130,7 @@ def get_search_stats_ts_key(m, settings):
         return None, None
 
     mm = message_to_dict(m)
-    return recon_lw.recon_lw.epoch_nano_str_to_ts(mm["TimeOfEvent"]), mm["TradableInstrumentID"]
+    return recon_lw.epoch_nano_str_to_ts(mm["TimeOfEvent"]), mm["TradableInstrumentID"]
     # epoch_nano_str_to_ts is in recon_ob_stats module
 
 
