@@ -10,4 +10,4 @@ importlib_metadata
 orjson~=3.8
 sortedcontainers
 th2-data-services~=2.0.0.dev
-th2-data-services-lwdp~=2.1.0
+th2-data-services-lwdp>=2.1  # We cannot set exact version because it can be as 2 and as 3.
