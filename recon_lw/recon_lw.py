@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta
+from typing import Iterable, List
+
 from sortedcontainers import SortedKeyList
 from th2_data_services.data import Data
-from th2_data_services.utils.message_utils import message_utils
+from recon_lw.message_utils import message_to_dict
 from os import listdir
 from os import path
 from recon_lw.EventsSaver import EventsSaver
 from th2_data_services.config import options
+
 
 def epoch_nano_str_to_ts(s_nanos):
     nanos = int(s_nanos)
@@ -22,11 +25,11 @@ def time_stamp_key(ts):
 
 
 def time_index_add(key, m, time_index):
-    time_index.add((m["timestamp"], key))
+    time_index.add((options.mfr.get_timestamp(m), key))
 
 
 def message_cache_add(m, message_cache):
-    message_cache[m["messageId"]] = m
+    message_cache[options.mfr.get_id(m)] = m
 
 
 def message_cache_pop(m_id, message_cache):
@@ -44,29 +47,30 @@ def pair_one_match(next_batch, rule_dict):
 
     for m in next_batch:
         pair_key = pair_key_func(m)
+        message_id = options.mfr.get_id(m)
         if pair_key is not None:
             if pair_key not in match_index:
-                match_index[pair_key] = [m["messageId"], None, None]
+                match_index[pair_key] = [message_id, None, None]
                 time_index_add(pair_key, m, time_index)
                 message_cache_add(m, message_cache)
             else:
                 element = match_index[pair_key]
                 if element[0] is None:
-                    element[0] = m["messageId"]
+                    element[0] = message_id
                     message_cache_add(m, message_cache)
                 elif element[1] is None:
-                    element[1] = m["messageId"]
+                    element[1] = message_id
                     message_cache_add(m, message_cache)
         one_key = one_key_func(m)
         if one_key is not None:
             if one_key not in match_index:
-                match_index[one_key] = [None, None, m["messageId"]]
+                match_index[one_key] = [None, None, message_id]
                 time_index_add(one_key, m, time_index)
                 message_cache_add(m, message_cache)
             else:
                 element = match_index[one_key]
                 if element[2] is None:
-                    element[2] = m["messageId"]
+                    element[2] = message_id
                     message_cache_add(m, message_cache)
 
 
@@ -81,8 +85,9 @@ def one_many_match(next_batch, rule_dict):
     n_duplicates = 0
     for m in next_batch:
         first_keys = first_key_func(m)
+        message_id = options.mfr.get_id(m)
         if first_keys is not None:
-            match_index_element = [m["messageId"], None]
+            match_index_element = [message_id, None]
             for first_key in first_keys:
                 if first_key not in match_index:
                     match_index[first_key] = match_index_element
@@ -94,27 +99,27 @@ def one_many_match(next_batch, rule_dict):
                     if existing[0] is not None:
                         n_duplicates += 1
                     else:
-                        existing[0] = m["messageId"]
+                        existing[0] = message_id
                         message_cache_add(m, message_cache)
                         continue
         second_key = second_key_func(m)
         if second_key is not None:
             if second_key not in match_index:
-                match_index[second_key] = [None, m["messageId"]]
+                match_index[second_key] = [None, message_id]
                 time_index_add(second_key, m, time_index)
                 message_cache_add(m, message_cache)
             else:
                 existing = match_index[second_key]
                 if existing[1] is None:
-                    existing[1] = m["messageId"]
-                    #match_index[second_key] = [existing[0], m["messageId"]]
+                    existing[1] = message_id
+                    # match_index[second_key] = [existing[0], message_id]
                     message_cache_add(m, message_cache)
                 else:
-                    existing.append(m["messageId"])
+                    existing.append(message_id)
                     message_cache_add(m, message_cache)
 
     if n_duplicates > 0:
-        print (n_duplicates, " duplicates detected")
+        print(n_duplicates, " duplicates detected")
 
 
 def flush_old(current_ts, horizon_delay, time_index):
@@ -143,12 +148,13 @@ def rule_flush(current_ts, horizon_delay, match_index, time_index, message_cache
     for k in old_keys:
         elem = match_index.pop(k)
         if elem[0] is not None and elem[0] not in message_cache:
-            #request already processed through different key
+            # request already processed through different key
             continue
 
-        results = interpret_func([message_cache_pop(item, message_cache) for item in elem],live_orders_cache,event_sequence)
-#       result = interpret_func(message_cache_pop(elem[0], message_cache),
-#                                message_cache_pop(elem[1], message_cache), event_sequence)
+        results = interpret_func([message_cache_pop(item, message_cache) for item in elem],
+                                 live_orders_cache, event_sequence)
+        #       result = interpret_func(message_cache_pop(elem[0], message_cache),
+        #                                message_cache_pop(elem[1], message_cache), event_sequence)
         if results is not None:
             for r in results:
                 r["parentEventId"] = parent_event["eventId"]
@@ -159,10 +165,11 @@ def rule_flush(current_ts, horizon_delay, match_index, time_index, message_cache
 
 def create_event_id(event_sequence):
     event_sequence["n"] += 1
-    return event_sequence["name"] + "_" + event_sequence["stamp"] +"-" +str(event_sequence["n"])
+    return event_sequence["name"] + "_" + event_sequence["stamp"] + "-" + str(event_sequence["n"])
 
 
 def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
+    # TODO - description is required.
     ts = datetime.now()
     e = {"eventId": create_event_id(event_sequence),
          "successful": ok,
@@ -170,13 +177,25 @@ def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
          "eventType": type,
          "body": body,
          "parentEventId": parentId,
-         "startTimestamp": {"epochSecond": int(ts.timestamp()),"nano": ts.microsecond*1000},
+         "startTimestamp": {"epochSecond": int(ts.timestamp()), "nano": ts.microsecond * 1000},
          "attachedMessageIds": []}
     return e
 
 
-#{"first_key_func":..., "second_key_func",... "interpret_func"}
-def execute_standalone(message_pickle_path, sessions_list, result_events_path, rules_settings_dict, data_objects=None):
+# {"first_key_func":..., "second_key_func",... "interpret_func"}
+def execute_standalone(message_pickle_path, sessions_list, result_events_path, rules_settings_dict,
+                       data_objects=None):
+    """Entrypoint for recon-lw.
+
+    If you provide data_objects, message_pickle_path -- will be ignored.
+
+    :param message_pickle_path:
+    :param sessions_list:
+    :param result_events_path:
+    :param rules_settings_dict:
+    :param data_objects:
+    :return:
+    """
     events_buffer = []
     box_ts = datetime.now()
     events_saver = EventsSaver(result_events_path)
@@ -186,7 +205,8 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
     events_saver.save_events([root_event])
     for rule_key, rule_settings in rules_settings_dict.items():
         rule_settings["rule_root_event"] = create_event(rule_key, "LwReconRule",
-                                                        event_sequence, parentId=root_event["eventId"])
+                                                        event_sequence,
+                                                        parentId=root_event["eventId"])
         if "init_func" not in rule_settings:
             rule_settings["init_func"] = init_matcher
         if "collect_func" not in rule_settings:
@@ -202,27 +222,28 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
         if sessions_list is not None and len(sessions_list):
             sessions_set = set(sessions_list)
             streams = open_streams(message_pickle_path,
-                                lambda n: n[:n.rfind('_')] in sessions_set)
+                                   lambda n: n[:n.rfind('_')] in sessions_set)
         else:
             streams = open_streams(message_pickle_path)
 
-    message_buffer = [None]*100
+    message_buffer = [None] * 100
     buffer_len = 100
-    while len(streams)>0:
-        next_batch_len = get_next_batch(streams, message_buffer, buffer_len, lambda m: m["timestamp"])
+    while len(streams) > 0:
+        next_batch_len = get_next_batch(streams, message_buffer, buffer_len,
+                                        lambda m: m["timestamp"])
         buffer_to_process = message_buffer
         if next_batch_len < buffer_len:
             buffer_to_process = message_buffer[:next_batch_len]
         for rule_settings in rules_settings_dict.values():
             rule_settings["collect_func"](buffer_to_process, rule_settings)
-            ts = buffer_to_process[len(buffer_to_process)-1]["timestamp"]
+            ts = buffer_to_process[len(buffer_to_process) - 1]["timestamp"]
             rule_settings["flush_func"](ts, rule_settings, event_sequence,
                                         lambda ev_batch: events_saver.save_events(ev_batch))
-    #final flush
+    # final flush
     for rule_settings in rules_settings_dict.values():
         rule_settings["flush_func"](None, rule_settings, event_sequence,
                                     lambda ev_batch: events_saver.save_events(ev_batch))
-    #one final flush
+    # one final flush
     events_saver.flush()
 
 
@@ -239,7 +260,7 @@ def collect_matcher(batch, rule_settings):
         rule_settings["live_orders_cache"].process_objects_batch(batch)
 
 
-def flush_matcher(ts,rule_settings,event_sequence, save_events_func):
+def flush_matcher(ts, rule_settings, event_sequence, save_events_func):
     rule_flush(ts,
                rule_settings["horizon_delay"],
                rule_settings["match_index"],
@@ -253,28 +274,55 @@ def flush_matcher(ts,rule_settings,event_sequence, save_events_func):
 
 
 def simplify_message(m):
+    """Returns a copy of m with changed fields:
+
+    Added:
+        - simpleBody
+        - protocol
+
+    Removed
+        - body
+        - bodyBase64
+
+    :param m:
+    :return:
+    """
     mm = m.copy()
     if len(m["body"]) > 0:
-        mm["simpleBody"] = message_utils.message_to_dict(m)  #.message2dict(m)
+        mm["simpleBody"] = message_to_dict(m)
         mm["protocol"] = protocol(m)
     else:
         mm["simpleBody"] = {}
+
+    # TODO
+    #  - it's better to get these names from DataSource message description.
+    #  - it's possible that sometime the path of the body will be changed.
     mm.pop("body")
     mm.pop("bodyBase64")
     return mm
 
 
-def load_to_list(messages, simplify):
+def load_to_list(messages: Iterable[dict], simplify: bool) -> List[dict]:
     if simplify:
         return list(map(simplify_message, messages))
     else:
         return list(messages)
 
 
-def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_list, simplify=True):
+def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_list,
+                                     simplify=True):
+    """DEPRECATED FUNCTIONS SINCE WE HAVE DownloadCommand in LwDP data source.
+
+    :param message_pickle_path:
+    :param output_path:
+    :param sessions_list:
+    :param simplify:
+    :return:
+    """
     messages = Data.from_cache_file(message_pickle_path)
     for s in sessions_list:
-        messages_session_in = messages.filter(lambda m: m["sessionId"] == s and m["direction"] == "IN")
+        messages_session_in = messages.filter(
+            lambda m: options.mfr.get_session_id(m) == s and options.mfr.get_direction(m) == "IN")
         print("Sorting ", s, " IN ", datetime.now())
         arr = load_to_list(messages_session_in, simplify)
         arr.sort(key=lambda m: time_stamp_key(m["timestamp"]))
@@ -283,7 +331,8 @@ def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_
         print("Saving ", file_name, " ", datetime.now())
         messages_session_in_to_save.build_cache(file_name)
 
-        messages_session_out = messages.filter(lambda m: m["sessionId"] == s and m["direction"] == "OUT")
+        messages_session_out = messages.filter(
+            lambda m: options.mfr.get_session_id(m) == s and options.mfr.get_direction(m) == "OUT")
         print("Sorting ", s, " OUT ", datetime.now())
         arr = load_to_list(messages_session_out, simplify)
         arr.sort(key=lambda m: time_stamp_key(m["timestamp"]))
@@ -295,15 +344,22 @@ def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_
 
 
 def protocol(m):
+    """
+
+    Expects the message after expand_message function.
+
+    :param m:
+    :return:
+    """
+    # Simplified message
     if "body" not in m:
-        #simplified message
         return m["protocol"]
-    
+
     if len(m["body"]) == 0:
         return "error"
-    if "protocol" not in m["body"]["metadata"]:
-        return "not_defined"
-    return m["body"]["metadata"]["protocol"]
+
+    pr = options.smsr.get_protocol(options.mfr.get_body())
+    return "not_defined" if pr is None else pr
 
 
 def open_scoped_events_streams(streams_path, name_filter=None, data_filter=None):
@@ -331,7 +387,7 @@ def open_scoped_events_streams(streams_path, name_filter=None, data_filter=None)
 
 def open_streams(streams_path, name_filter=None, expanded_messages=False, data_objects=None):
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
-    
+
     if data_objects:
         for stream in data_objects:
             ts0 = {"epochSecond": 0, "nano": 0}
@@ -345,7 +401,8 @@ def open_streams(streams_path, name_filter=None, expanded_messages=False, data_o
                 continue
             data_object = Data.from_cache_file(path.join(streams_path, f))
             if expanded_messages:
-                stream = (mm for m in data_object for mm in options.MESSAGE_FIELDS_RESOLVER.expand_message(m))
+                stream = (mm for m in data_object for mm in
+                          options.MESSAGE_FIELDS_RESOLVER.expand_message(m))
             else:
                 stream = Data.from_cache_file(path.join(streams_path, f))
             ts0 = {"epochSecond": 0, "nano": 0}
@@ -356,7 +413,7 @@ def open_streams(streams_path, name_filter=None, expanded_messages=False, data_o
 
 def get_next_batch(streams, batch, b_len, get_timestamp_func):
     batch_pos = 0
-    batch_len = b_len #len(batch)
+    batch_len = b_len  # len(batch)
     while batch_pos < batch_len and len(streams) > 0:
         next_stream = streams.pop(0)
         try:
@@ -368,4 +425,3 @@ def get_next_batch(streams, batch, b_len, get_timestamp_func):
         except StopIteration as e:
             continue
     return batch_pos
-
