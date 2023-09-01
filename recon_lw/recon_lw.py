@@ -389,8 +389,12 @@ def open_streams(streams_path, name_filter=None, expanded_messages=False, data_o
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
 
     if data_objects:
-        for stream in data_objects:
+        for do in data_objects:
             ts0 = {"epochSecond": 0, "nano": 0}
+            if expanded_messages:
+                stream = (mm for m in do for mm in options.mfr.expand_message(m))
+            else:
+                stream = do
             streams.add((ts0, iter(stream), None))
     else:
         files = listdir(streams_path)
