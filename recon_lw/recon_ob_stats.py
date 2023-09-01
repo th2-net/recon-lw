@@ -7,6 +7,7 @@ from recon_lw.EventsSaver import EventsSaver
 from recon_lw.LastStateMatcher import LastStateMatcher
 from recon_lw.message_utils import message_to_dict
 import copy
+from th2_data_services.config import options
 
 
 def ob_compare_stats_get_state_ts_key_order(o, settings):
@@ -46,7 +47,7 @@ def ob_compare_stats_interpret(match: List, custom_settings, create_event, save_
         if str(v) != str(match[1]["body"][k]):
             fails[k] = [v, str(match[1]["body"][k])]
 
-    result_event = create_event("StatsCheck" + match[0]["messageType"],
+    result_event = create_event("StatsCheck" + options.smfr.get_type(options.mfr.get_body(match[0])),
                                 "StatsCheck",
                                 len(fails) == 0,
                                 {"stats_message": match[0],
@@ -60,7 +61,8 @@ def ob_compare_stats_interpret(match: List, custom_settings, create_event, save_
 def ob_compare_stats(source_stat_messages_path: pathlib.PosixPath,
                      source_ob_events_path: pathlib.PosixPath,
                      results_path: pathlib.PosixPath,
-                     rules_dict: dict) -> None:
+                     rules_dict: dict,
+                     data_objects: list = None) -> None:
     events_saver = EventsSaver(results_path)
     processors = []
     root_event = events_saver.create_event("recon_lw_ob_streams " + datetime.now().isoformat(),
@@ -92,7 +94,7 @@ def ob_compare_stats(source_stat_messages_path: pathlib.PosixPath,
                                                   lambda n: "default_" not in n)
     streams2 = recon_lw.open_streams(source_stat_messages_path,
                                      lambda n: any(s in n for s in all_stat_sessions),
-                                     expanded_messages=True)
+                                     expanded_messages=True, data_objects=data_objects)
     for elem in streams2:
         streams.add(elem)
 
