@@ -48,7 +48,7 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
         result, log_entries = operation(**parameters)
         for i in range(len(log_entries)):
             log_entries[i]["v"] = initial_v + i + 1
-        book["v"] += initial_v + len(log_entries)
+        book["v"] = len(log_entries)
 
         if len(result) > 0:
             result["operation"] = operation.__name__
