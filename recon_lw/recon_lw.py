@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Iterable, List
+from typing import Iterable, List, Tuple, Iterator, Optional, Dict
 
 from sortedcontainers import SortedKeyList
 from th2_data_services.data import Data
@@ -362,11 +362,15 @@ def protocol(m):
     return "not_defined" if pr is None else pr
 
 
-def open_scoped_events_streams(streams_path, name_filter=None, data_filter=None):
+def open_scoped_events_streams(
+        streams_path,
+        name_filter=None,
+        data_filter=None
+) -> SortedKeyList[Tuple[dict, Iterator, Optional[dict]]]:
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
     files = listdir(streams_path)
     files.sort()
-    scopes_streams = {}
+    scopes_streams: Dict[str, Data] = {}
     for f in files:
         if ".pickle" not in f:
             continue
@@ -376,7 +380,10 @@ def open_scoped_events_streams(streams_path, name_filter=None, data_filter=None)
         if scope not in scopes_streams:
             scopes_streams[scope] = Data.from_cache_file(path.join(streams_path, f))
         else:
-            scopes_streams[scope] += Data.from_cache_file(path.join(streams_path, f))
+            # 2023.09.28 -- tmp change to fix a bug https://exactpro.atlassian.net/browse/TH2-5091
+            # scopes_streams[scope] += Data.from_cache_file(path.join(streams_path, f))
+            scopes_streams[scope] = scopes_streams[scope] + Data.from_cache_file(path.join(streams_path, f))
+
     for strm in scopes_streams.values():
         if data_filter:
             strm = strm.filter(data_filter)
@@ -415,7 +422,21 @@ def open_streams(streams_path, name_filter=None, expanded_messages=False, data_o
     return streams
 
 
-def get_next_batch(streams, batch, b_len, get_timestamp_func):
+def get_next_batch(streams: SortedKeyList[Tuple[dict, Iterator, Optional[dict]]],
+                   batch: List[dict], b_len, get_timestamp_func) -> int:
+    """
+
+    Args:
+        streams: [(Th2ProtobufTimestamp,
+                    iterator for Data object,
+                    First object from Data object or None), ...]
+        batch:
+        b_len:
+        get_timestamp_func:
+
+    Returns:
+
+    """
     batch_pos = 0
     batch_len = b_len  # len(batch)
     while batch_pos < batch_len and len(streams) > 0:
