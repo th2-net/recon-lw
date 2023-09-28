@@ -345,6 +345,18 @@ def split_every(n, data):
 # {"horizon_dely": 180, full_session: "aaa", aggr_session: "bbb", top_session: "ccc"}
 def ob_compare_streams(source_events_path: pathlib.PosixPath, results_path: pathlib.PosixPath,
                        rules_dict: dict) -> None:
+    """The entrypoint function for comparing order-books.
+
+    Generates pickle files as result.
+
+    Args:
+        source_events_path: The path to pickle files that were generated as a result of recon_ob.py.
+        results_path: The path where this function will put results in the pickle format.
+        rules_dict:
+
+    Returns:
+        None
+    """
     events_saver = EventsSaver(results_path)
     processors = []
     root_event = events_saver.create_event("recon_lw_ob_streams " + datetime.now().isoformat(), "Microservice")
@@ -402,7 +414,7 @@ def ob_compare_streams(source_events_path: pathlib.PosixPath, results_path: path
         next_batch_len = recon_lw.get_next_batch(streams, message_buffer, buffer_len, lambda e: e["body"]["timestamp"])
         buffer_to_process = message_buffer
         if next_batch_len < buffer_len:
-            buffer_to_process = message_buffer[:next_batch_len]
+            buffer_to_process = message_buffer[:next_batch_len]  # List[dict]
         for p in processors:
             p.process_objects_batch(buffer_to_process)
 
