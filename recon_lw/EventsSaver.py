@@ -16,10 +16,13 @@ class EventsSaver:
 
     def flush_scope(self, scope):
         if scope in self._scopes_buffers:
+            ts_start = datetime.now().timestamp()
             events = Data(self._scopes_buffers[scope])
             events_file = Path(self._path) / (scope + "_scope_" + self._scopes_buffers[scope][0]["eventId"] + ".pickle")
             events.build_cache(events_file)
             self._scopes_buffers[scope].clear()
+            ts_end = datetime.now().timestamp()
+            print (datetime.now(), " Saved local events for ", scope, ", duration: ", ts_end - ts_start)
 
     def save_events(self, batch):
         for e in batch:
