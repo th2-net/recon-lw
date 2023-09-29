@@ -27,16 +27,16 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
                              event_sequence, parent_event, log_books_filter, log_books_collection,
                              aggregate_batch_updates):
     obs = []
-    debug_event = recon_lw.create_event("ROBDebug:" + parent_event["eventName"], "ROBDebug",
-                                        event_sequence,
-                                        ok=False,
-                                        body={"book_id": book_id,
-                                              "operations": [elem[0].__name__ for elem in
-                                                             operations_batch],
-                                              "times": [elem[1]["str_time_of_event"] for elem in
-                                                        operations_batch]},
-                                        parentId=parent_event["eventId"])
-    events.append(debug_event)
+    #debug_event = recon_lw.create_event("ROBDebug:" + parent_event["eventName"], "ROBDebug",
+    #                                    event_sequence,
+    #                                    ok=False,
+    #                                    body={"book_id": book_id,
+    #                                          "operations": [elem[0].__name__ for elem in
+    #                                                         operations_batch],
+    #                                          "times": [elem[1]["str_time_of_event"] for elem in
+    #                                                    operations_batch]},
+    #                                    parentId=parent_event["eventId"])
+    #events.append(debug_event)
 
     for operation, parameters, mess in operations_batch:
         initial_book = copy.deepcopy(book)
@@ -91,25 +91,25 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
                 if not r["successful"]:
                     r["body"]["operation_params"] = initial_parameters
                     r["body"]["initial_book"] = initial_book
-                r["body"]["operation"] = operation.__name__
-                r["body"]["book_id"] = book_id
-                r["parentEventId"] = parent_event["eventId"]
-                r["attachedMessageIds"] = [mess["messageId"]]
-                events.append(r)
+                    r["body"]["operation"] = operation.__name__
+                    r["body"]["book_id"] = book_id
+                    r["parentEventId"] = parent_event["eventId"]
+                    r["attachedMessageIds"] = [mess["messageId"]]
+                    events.append(r)
 
-    dbg_event = recon_lw.create_event("DebugEvent",
-                                      "DebugEvent",
-                                      event_sequence,
-                                      ok=True,
-                                      body={"operations": [(op[0], op[2]["messageId"]) for op in
-                                                           operations_batch],
-                                            "len(batch)": len(operations_batch),
-                                            "len(obs)": len(obs),
-                                            "book_id": book_id},
-                                      parentId=parent_event["eventId"])
-    for tupl in operations_batch:
-        dbg_event["attachedMessageIds"].append(tupl[2]["messageId"])
-    events.append(dbg_event)
+    #dbg_event = recon_lw.create_event("DebugEvent",
+    #                                  "DebugEvent",
+    #                                  event_sequence,
+    #                                  ok=True,
+    #                                  body={"operations": [(op[0], op[2]["messageId"]) for op in
+    #                                                       operations_batch],
+    #                                        "len(batch)": len(operations_batch),
+    #                                        "len(obs)": len(obs),
+    #                                        "book_id": book_id},
+    #                                  parentId=parent_event["eventId"])
+    #for tupl in operations_batch:
+    #    dbg_event["attachedMessageIds"].append(tupl[2]["messageId"])
+    #events.append(dbg_event)
 
     # update otv (order time version)
     orders_versions = {}
