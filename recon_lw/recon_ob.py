@@ -7,7 +7,6 @@ from recon_lw.SequenceCache import SequenceCache
 from th2_data_services.config import options
 import copy
 
-
 def combine_operations(operations_list):
     combined_operations = [[]]
     for operation_entry in operations_list:
@@ -39,8 +38,8 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
     #events.append(debug_event)
 
     for operation, parameters, mess in operations_batch:
-        initial_book = copy.deepcopy(book)
-        initial_parameters = copy.copy(parameters)
+        initial_book = ob_copy(book) #copy.deepcopy(book)
+        initial_parameters = parameters.copy() #copy.copy(parameters)
         parameters["order_book"] = book
         if "v" not in book:
             book["v"] = 0
@@ -73,17 +72,17 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
                 log_book["operation_params"] = initial_parameters
                 log_book["source_msg_id"] = mess["messageId"]
                 if log_books_filter is None or log_books_filter(log_book):
-                    #log_books_collection.append(log_book)
+                    log_books_collection.append(log_book)
                     obs.append(log_book)
-                #    log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
-                #                                      "OrderBook",
-                #                                      event_sequence,
-                #                                      ok=True,
-                #                                      body=log_book,
-                #                                      parentId=parent_event["eventId"])
-                #    log_event["attachedMessageIds"] = [mess["messageId"]]
-                #    log_event["scope"] = mess["sessionId"]
-                #    obs.append(log_event)
+                    #log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
+                    #                                  "OrderBook",
+                    #                                  event_sequence,
+                    #                                  ok=True,
+                    #                                  body=log_book,
+                    #                                  parentId=parent_event["eventId"])
+                    #log_event["attachedMessageIds"] = [mess["messageId"]]
+                    #log_event["scope"] = mess["sessionId"]
+                    #obs.append(log_event)
 
         results = check_book_rule(book, event_sequence)
         if results is not None:
@@ -191,7 +190,7 @@ def process_market_data_update(mess_batch, events, books_cache, get_book_id_func
 
     for book_id in books_updates.keys():
         if book_id not in books_cache:
-            books_cache[book_id] = copy.deepcopy(initial_book_params)
+            books_cache[book_id] = ob_copy(initial_book_params) #copy.deepcopy(initial_book_params)
             # books_cache[book_id] = {"ask": {}, "bid": {}, "status": "?"}
         book = books_cache[book_id]
         operations = []
@@ -231,7 +230,6 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
             continue
         messages_chunk.extend(options.mfr.expand_message(mess))
         n_processed += 1
-    return n_processed
     process_market_data_update(messages_chunk, events, books_cache, get_book_id_func,
                                update_book_rule,
                                check_book_rule, event_sequence, parent_event, initial_book_params,
@@ -317,6 +315,22 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
     # flush_sequence_clear_cache(n_processed, rule_settings["sequence_cache"])
 
 
+def ob_copy(b):
+    cp = {}
+    for k, v in b.items():
+        if k in ["ask", "bid"]:
+            cp[k] = {key: val.copy() for key, val in b[k].items()}
+            continue
+        if k in ["aggr_ask", "aggr_bid"]:
+            cp[k] = [lv.copy() for lv in b[k]]
+            continue
+        if k == "aggr_seq":
+            cp[k] = b[k].copy()
+            continue
+        cp[k] = v
+    return cp
+
+
 def init_aggr_seq(order_book: dict) -> None:
     order_book["aggr_seq"] = {"top_delta": 0, "limit_delta": 0}
     order_book["implied_only"] = False
@@ -354,7 +368,8 @@ def ob_add_order(order_id: str, price: float, size: int, side: str, str_time_of_
         order_book[side][price][order_id] = size
 
     reflect_price_update_in_version(side, price, str_time_of_event, order_book)
-    return {}, [copy.deepcopy(order_book)]
+    #return {}, [copy.deepcopy(order_book)]
+    return {}, [ob_copy(order_book)]
 
 
 def ob_update_order(order_id: str, price: float, size: int, str_time_of_event,
@@ -375,19 +390,22 @@ def ob_update_order(order_id: str, price: float, size: int, str_time_of_event,
     if price == old_price:
         order_book[old_side][old_price][order_id] = size
         reflect_price_update_in_version(old_side, old_price, str_time_of_event, order_book)
-        log.append(copy.deepcopy(order_book))
+        #log.append(copy.deepcopy(order_book))
+        log.append(ob_copy(order_book))
     else:
         # should no get here but will monitor
         reflect_price_update_in_version(old_side, old_price, str_time_of_event, order_book)
         order_book[old_side][old_price].pop(order_id)
         if len(order_book[old_side][old_price]) == 0:
             order_book[old_side].pop(old_price)
-        log.append(copy.deepcopy(order_book))
+        #log.append(copy.deepcopy(order_book))
+        log.append(ob_copy(order_book))
         if price not in order_book[old_side]:
             order_book[old_side][price] = {}
         order_book[old_side][price][order_id] = size
         reflect_price_update_in_version(old_side, price, str_time_of_event, order_book)
-        log.append(copy.deepcopy(order_book))
+        #log.append(copy.deepcopy(order_book))
+        log.append(ob_copy(order_book))
 
     return {}, log
 
@@ -407,10 +425,12 @@ def ob_delete_order(order_id: str, str_time_of_event, order_book: dict) -> tuple
     order_book[old_side][old_price].pop(order_id)
     if len(order_book[old_side][old_price]) == 0:
         order_book[old_side].pop(old_price)
-        log.append(copy.deepcopy(order_book))
-        max_levels = order_book["aggr_max_levels"]
+        #log.append(copy.deepcopy(order_book))
+        log.append(ob_copy(order_book))
+        #max_levels = order_book["aggr_max_levels"]
     else:
-        log.append(copy.deepcopy(order_book))
+        #log.append(copy.deepcopy(order_book))
+        log.append(ob_copy(order_book))
 
     return {}, log
 
@@ -438,15 +458,19 @@ def ob_trade_order(order_id: str, traded_price: float, traded_size: int, str_tim
             order_book[old_side][old_price].pop(order_id)
             if len(order_book[old_side][old_price]) == 0:
                 order_book[old_side].pop(old_price)
-                log.append(copy.deepcopy(order_book))
+                #log.append(copy.deepcopy(order_book))
+                log.append(ob_copy(order_book))
             else:
-                log.append(copy.deepcopy(order_book))
+                #log.append(copy.deepcopy(order_book))
+                log.append(ob_copy(order_book))
         else:
             order_book[old_side][old_price][order_id] -= traded_size
-            log.append(copy.deepcopy(order_book))
+            #log.append(copy.deepcopy(order_book))
+            log.append(ob_copy(order_book))
         return errors, log
     else:
-        return errors, [copy.deepcopy(order_book)]
+        #return errors, [copy.deepcopy(order_book)]
+        return errors, [ob_copy(order_book)]
 
 
 def ob_clean_book(str_time_of_event, order_book: dict) -> tuple:
@@ -462,7 +486,8 @@ def ob_clean_book(str_time_of_event, order_book: dict) -> tuple:
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["top_delta"] = 1
-    return {}, [copy.deepcopy(order_book)]
+    #return {}, [copy.deepcopy(order_book)]
+    return {}, [ob_copy(order_book)]
 
 
 def ob_change_status(new_status: str, str_time_of_event, order_book: dict) -> tuple:
@@ -476,7 +501,8 @@ def ob_change_status(new_status: str, str_time_of_event, order_book: dict) -> tu
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["top_delta"] = 1
-    return {}, [copy.deepcopy(order_book)]
+    #return {}, [copy.deepcopy(order_book)]
+    return {}, [ob_copy(order_book)]
 
 
 def find_order_position(order_id: str, order_book: dict) -> tuple:
@@ -539,7 +565,8 @@ def ob_aggr_add_level(side: str, level: int, price: float, real_qty: int, real_n
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
 
-    return {}, [copy.deepcopy(order_book)]
+    #return {}, [copy.deepcopy(order_book)]
+    return {}, [ob_copy(order_book)]
 
 
 def ob_aggr_delete_level(side: str, level: int, str_time_of_event, order_book: dict) -> tuple:
@@ -568,7 +595,8 @@ def ob_aggr_delete_level(side: str, level: int, str_time_of_event, order_book: d
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
 
-    return {}, [copy.deepcopy(order_book)]
+    #return {}, [copy.deepcopy(order_book)]
+    return {}, [ob_copy(order_book)]
 
 
 def ob_aggr_update_level(side: str, level: int, price: float, real_qty: int, real_num_orders: int,
@@ -606,7 +634,8 @@ def ob_aggr_update_level(side: str, level: int, price: float, real_qty: int, rea
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
 
-    return {}, [copy.deepcopy(order_book)]
+    #return {}, [copy.deepcopy(order_book)]
+    return {}, [ob_copy(order_book)]
 
 
 def ob_aggr_clean_book(str_time_of_event, order_book: dict) -> tuple:
@@ -621,7 +650,8 @@ def ob_aggr_clean_book(str_time_of_event, order_book: dict) -> tuple:
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["top_delta"] = 1
-    return {}, [copy.deepcopy(order_book)]
+    #return {}, [copy.deepcopy(order_book)]
+    return {}, [ob_copy(order_book)]
 
 
 def ob_top_clean_book(str_time_of_event, order_book: dict) -> tuple:
@@ -644,7 +674,8 @@ def ob_top_clean_book(str_time_of_event, order_book: dict) -> tuple:
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["top_delta"] = 1
 
-    return {}, [copy.deepcopy(order_book)]
+    #return {}, [copy.deepcopy(order_book)]
+    return {}, [ob_copy(order_book)]
 
 
 def process_trade(trade_price: float, order_book: dict):
@@ -682,7 +713,8 @@ def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict
     order_book["aggr_seq"]["top_delta"] = 1
     order_book["aggr_seq"]["limit_delta"] = 1
 
-    return errors, [copy.deepcopy(order_book)]
+    #return errors, [copy.deepcopy(order_book)]
+    return errors, [ob_copy(order_book)]
 
 
 def ob_indicative_open_price(open_price: float, open_size: int,
@@ -704,7 +736,8 @@ def ob_indicative_open_price(open_price: float, open_size: int,
     order_book["aggr_seq"]["top_delta"] = 1
     order_book["aggr_seq"]["limit_delta"] = 1
 
-    return {}, [copy.deepcopy(order_book)]
+    #return errors, [copy.deepcopy(order_book)]
+    return {}, [ob_copy(order_book)]
 
 
 def is_side_unchanged(side, new_price, new_real_qty, new_impl_qty, new_real_n_orders,
@@ -791,6 +824,7 @@ def ob_top_update(ask_price: float, ask_real_qty: int, ask_impl_qty: int, ask_re
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["top_delta"] = 1
 
+    #return {}, [copy.deepcopy(order_book)]
     return {}, [copy.deepcopy(order_book)]
 
 
