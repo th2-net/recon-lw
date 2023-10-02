@@ -36,7 +36,7 @@ class EventsSaver:
             scope = e["scope"] if "scope" in e else "default"
             #temp test
             if scope not in self._files:
-                self._files[scope] = open(os.path.join(self._path, "/", scope, "_", self._event_sequence["stamp"]), 'w')
+                self._files[scope] = open(os.path.join(self._path, f"{scope}_{self._event_sequence['stamp']}"), 'w')
             
             pickle.dump(e, self._files[scope])
             return
