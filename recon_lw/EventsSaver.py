@@ -41,7 +41,7 @@ class EventsSaver:
                 self._files[scope] = open(os.path.join(self._path, f"{scope}_scope_{self._event_sequence['stamp']}.pickle"), 'wb')
             
             pickle.dump(e, self._files[scope])
-            return
+            continue
             if scope not in self._scopes_buffers:
                 self._scopes_buffers[scope] = []
             self._scopes_buffers[scope].append(e)
