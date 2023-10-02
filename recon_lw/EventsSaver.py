@@ -35,8 +35,10 @@ class EventsSaver:
         for e in batch:
             scope = e["scope"] if "scope" in e else "default"
             #temp test
+
+            #events_file = Path(self._path) / (scope + "_scope_" + self._scopes_buffers[scope][0]["eventId"] + ".pickle")
             if scope not in self._files:
-                self._files[scope] = open(os.path.join(self._path, f"{scope}_{self._event_sequence['stamp']}"), 'wb')
+                self._files[scope] = open(os.path.join(self._path, f"{scope}_scope_{self._event_sequence['stamp']}.pickle"), 'wb')
             
             pickle.dump(e, self._files[scope])
             return
