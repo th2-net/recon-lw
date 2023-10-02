@@ -3,14 +3,20 @@ from datetime import datetime, timedelta
 from th2_data_services.data import Data
 from pathlib import Path
 
+import pickle
 
 class EventsSaver:
     def __init__(self, path):
         self._event_sequence = {"name": "recon_lw", "stamp": str(datetime.now().timestamp()), "n": 0}
         self._scopes_buffers = {}
         self._path = path
+        #temp test
+        self._files = {}
 
     def flush(self):
+        for f in self._files.values():
+            f.close()
+        return
         for scope in self._scopes_buffers.keys():
             self.flush_scope(scope)
 
@@ -27,6 +33,12 @@ class EventsSaver:
     def save_events(self, batch):
         for e in batch:
             scope = e["scope"] if "scope" in e else "default"
+            #temp test
+            if scope not in self._files:
+                self._files[scope] = open(self._path + "/" + scope + "_" +self._event_sequence["stamp"], 'w')
+            
+            pickle.dump(e, self._files[scope])
+            return
             if scope not in self._scopes_buffers:
                 self._scopes_buffers[scope] = []
             self._scopes_buffers[scope].append(e)
