@@ -321,7 +321,7 @@ def ob_copy(b):
         if k in ["ask", "bid"]:
             cp[k] = {key: val.copy() for key, val in b[k].items()}
             continue
-        if k in ["aggr_ask", "aggr_bid"]:
+        if k in ["ask_aggr", "bid_aggr"]:
             cp[k] = [lv.copy() for lv in b[k]]
             continue
         if k == "aggr_seq":
