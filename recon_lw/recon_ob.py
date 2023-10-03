@@ -38,7 +38,7 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
     #events.append(debug_event)
 
     for operation, parameters, mess in operations_batch:
-        initial_book = ob_copy(book) #copy.deepcopy(book)
+        #initial_book = ob_copy(book) #copy.deepcopy(book)
         initial_parameters = parameters.copy() #copy.copy(parameters)
         parameters["order_book"] = book
         if "v" not in book:
@@ -52,7 +52,7 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
         if len(result) > 0:
             result["operation"] = operation.__name__
             result["operation_params"] = initial_parameters
-            result["initial_book"] = initial_book
+            result["resulting_book"] = ob_copy(book)
             result["book_id"] = book_id
             result["sessionId"] = mess["sessionId"]
             update_event = recon_lw.create_event("UpdateBookError:" + parent_event["eventName"],
@@ -228,8 +228,10 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
             events.append(gap_event)
             n_processed += 1
             continue
-        messages_chunk.extend(options.mfr.expand_message(mess))
+        #messages_chunk.extend(options.mfr.expand_message(mess))
         n_processed += 1
+    print ("Got next chunk: " + n_processed)
+    return n_processed
     process_market_data_update(messages_chunk, events, books_cache, get_book_id_func,
                                update_book_rule,
                                check_book_rule, event_sequence, parent_event, initial_book_params,
