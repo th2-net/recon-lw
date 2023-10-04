@@ -69,6 +69,8 @@ class SequenceCache:
         else:
             expiring_times = list(self._time_indexes.keys())
         
+        if len(expiring_times) == 0:
+            return []
         start = None
         end = None
         for t in expiring_times:
