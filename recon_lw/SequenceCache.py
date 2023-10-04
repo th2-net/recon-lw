@@ -6,11 +6,27 @@ class SequenceCache:
     def __init__(self, horizon_delay_seconds):
         self._sequence = SortedKeyList(key=lambda item: item[0])
         self._times = SortedKeyList(key=lambda t: recon_lw.time_stamp_key(t[0]))
-        self._duplicates = SortedKeyList(key=lambda item: item[0])
+        self._duplicates = []#= SortedKeyList(key=lambda item: item[0])
         self._horizon_delay_seconds = horizon_delay_seconds
         self._debug = False
 
+        self._time_indexes = {}
+        self._objects = {}
+
+
     def add_object(self, seq_num: int, ts: dict, o: dict) -> None:
+        if seq_num in self._objects:
+            self._duplicates.append(o)
+        if ts["epoch"] not in self._time_indexes:
+            self._time_indexes[ts["epoch"]] = [seq_num,seq_num]
+        else:
+            min_max = self._time_indexes[ts["epoch"]]
+            if seq_num < min_max[0]:
+                min_max[0] = seq_num
+            elif seq_num > min_max[1]:
+                min_max[1] = seq_num
+        self._objects[seq_num] = o
+        return
         seq_element = (seq_num, o)
         # gaps = sequence_cache["gaps"]
         gap = {"gap": True}
@@ -38,8 +54,32 @@ class SequenceCache:
         else:
             self._sequence.add(seq_element)
             self._times.add((ts, seq_num))
+    
+    def yeild_objects(self, start,end):
+        for seq_num in range(start, end+1):
+            if seq_num in self._objects:
+                yield self._objects.pop(seq_num)
+            else:
+                yield {"gap": True}
 
     def get_next_chunk(self, current_ts: dict) -> SortedKeyList:
+        if current_ts is not None:
+            horizon = current_ts["epoch"] - self._horizon_delay_seconds
+            expiring_times = [t for t in self._time_indexes.keys() if t < horizon]
+        else:
+            expiring_times = list(self._time_indexes.keys())
+        
+        start = None
+        end = None
+        for t in expiring_times:
+            min_max = self._time_indexes.pop(t)
+            if start is None or min_max[0] < start:
+                start = min_max[0]
+            if end is None or min_max[1] > end:
+                end = min_max[1]
+        
+        return self.yeild_objects(start, end)
+        
         if current_ts is not None:
             edge_timestamp = {"epochSecond": current_ts["epochSecond"] - self._horizon_delay_seconds,
                               "nano": 0}
@@ -58,6 +98,7 @@ class SequenceCache:
             return self._sequence
 
     def clear_processed_chunk(self, processed_len: int) -> None:
+        return
         for i in range(0, processed_len):
             self._sequence.pop(0)
 
