@@ -58,9 +58,9 @@ class SequenceCache:
     def yeild_objects(self, start,end):
         for seq_num in range(start, end+1):
             if seq_num in self._objects:
-                yield self._objects.pop(seq_num)
+                yield (seq_num, self._objects.pop(seq_num))
             else:
-                yield {"gap": True}
+                yield (seq_num,{"gap": True})
 
     def get_next_chunk(self, current_ts: dict) -> SortedKeyList:
         if current_ts is not None:
