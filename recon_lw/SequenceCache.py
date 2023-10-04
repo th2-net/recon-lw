@@ -17,10 +17,10 @@ class SequenceCache:
     def add_object(self, seq_num: int, ts: dict, o: dict) -> None:
         if seq_num in self._objects:
             self._duplicates.append(o)
-        if ts["epoch"] not in self._time_indexes:
-            self._time_indexes[ts["epoch"]] = [seq_num,seq_num]
+        if ts["epochSecond"] not in self._time_indexes:
+            self._time_indexes[ts["epochSecond"]] = [seq_num,seq_num]
         else:
-            min_max = self._time_indexes[ts["epoch"]]
+            min_max = self._time_indexes[ts["epochSecond"]]
             if seq_num < min_max[0]:
                 min_max[0] = seq_num
             elif seq_num > min_max[1]:
@@ -64,7 +64,7 @@ class SequenceCache:
 
     def get_next_chunk(self, current_ts: dict) -> SortedKeyList:
         if current_ts is not None:
-            horizon = current_ts["epoch"] - self._horizon_delay_seconds
+            horizon = current_ts["epochSecond"] - self._horizon_delay_seconds
             expiring_times = [t for t in self._time_indexes.keys() if t < horizon]
         else:
             expiring_times = list(self._time_indexes.keys())
