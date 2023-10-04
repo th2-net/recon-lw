@@ -230,7 +230,7 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
             continue
         #messages_chunk.extend(options.mfr.expand_message(mess))
         n_processed += 1
-    print ("Got next chunk: " + n_processed)
+    print(f"Got next chunk: {n_processed}")
     return n_processed
     process_market_data_update(messages_chunk, events, books_cache, get_book_id_func,
                                update_book_rule,
