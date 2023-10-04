@@ -228,7 +228,7 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
             events.append(gap_event)
             n_processed += 1
             continue
-        #messages_chunk.extend(options.mfr.expand_message(mess))
+        messages_chunk.extend(options.mfr.expand_message(mess))
         n_processed += 1
     #print ("Got next chunk: ",n_processed)
     #return n_processed
