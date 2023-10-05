@@ -30,10 +30,10 @@ class TimeCacheMatcher:
             if key1 is not None:
                 if key1 not in self._match_index:
                     self._match_index[key1] = [o, None]
-                    if ts["epochSeconds"] not in self._time_index2:
-                        self._time_index2[ts["epochSeconds"]] = [key1]
+                    if ts["epochSecond"] not in self._time_index2:
+                        self._time_index2[ts["epochSecond"]] = [key1]
                     else:
-                        self._time_index2[ts["epochSeconds"]].append(key1)
+                        self._time_index2[ts["epochSecond"]].append(key1)
                     #self._time_index.add([ts, key1])
                     if self._debug:
                         self.debug({"processor": self._get_timestamp_key1_key2.__name__, "event": "key1 added",
@@ -47,10 +47,10 @@ class TimeCacheMatcher:
                 if key2 not in self._match_index:
                     self._match_index[key2] = [None, o]
                     #self._time_index.add([ts, key2])
-                    if ts["epochSeconds"] not in self._time_index2:
-                        self._time_index2[ts["epochSeconds"]] = [key2]
+                    if ts["epochSecond"] not in self._time_index2:
+                        self._time_index2[ts["epochSecond"]] = [key2]
                     else:
-                        self._time_index2[ts["epochSeconds"]].append(key2)
+                        self._time_index2[ts["epochSecond"]].append(key2)
                     if self._debug:
                         self.debug({"processor": self._get_timestamp_key1_key2.__name__,"event": "key2 added",
                                     "key": key2, "ts": ts})
