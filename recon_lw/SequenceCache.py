@@ -17,6 +17,8 @@ class SequenceCache:
     def add_object(self, seq_num: int, ts: dict, o: dict) -> None:
         if seq_num in self._objects:
             self._duplicates.append((seq_num,o, self._objects[seq_num]))
+            return
+        
         if ts["epochSecond"] not in self._time_indexes:
             self._time_indexes[ts["epochSecond"]] = [seq_num,seq_num]
         else:
