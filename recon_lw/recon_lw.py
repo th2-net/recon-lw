@@ -20,7 +20,7 @@ def ts_to_epoch_nano_str(ts):
 
 
 def time_stamp_key(ts):
-    return ts["epochSecond"] + 1_000_000_000 * ts["nano"]
+    return 1_000_000_000 * ts["epochSecond"] + ts["nano"]
     #nanos_str = str(ts["nano"]).zfill(9)
     #return str(ts["epochSecond"]) + "." + nanos_str
 
