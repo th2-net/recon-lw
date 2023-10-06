@@ -13,7 +13,7 @@ class LastStateMatcher:
         self._state_cache = {}
 
         # sorted list ts, key2, order, object
-        self._state_time_index = SortedKeyList(key=lambda t: recon_lw.time_stamp_key(t[0]) + "_" + t[1])
+        self._state_time_index = SortedKeyList(key=lambda t: f"{recon_lw.time_stamp_key(t[0])}_{t[1]}")
 
         self._get_search_ts_key = get_search_ts_key
         self._get_state_ts_key_order = get_state_ts_key_order
@@ -49,16 +49,15 @@ class LastStateMatcher:
             ts2, key2, order = self._get_state_ts_key_order(o, self._custom_settings)
             if key2 is not None:
                 stream_time = ts2
-                index_key = recon_lw.time_stamp_key(ts2) + "_" + key2
+                index_key = f"{recon_lw.time_stamp_key(ts2)}_{key2}"
                 i = self._state_time_index.bisect_key_left(index_key)
                 current_len = len(self._state_time_index)
                 next_key = None
                 if i < current_len:
-                    next_key = recon_lw.time_stamp_key(self._state_time_index[i][0]) + "_" + \
-                               self._state_time_index[i][1]
+                    next_key = f"{recon_lw.time_stamp_key(self._state_time_index[i][0])}_{self._state_time_index[i][1]}"
                 if i == current_len or index_key != next_key:
                     self._state_time_index.add([ts2, key2, order, o])
-                    self._state_cache_add_item(ts2,key2)
+                    self._state_cache_add_item(ts2, key2)
                 else:
                     rec = self._state_time_index[i]
                     if order >= rec[2]:
@@ -92,15 +91,15 @@ class LastStateMatcher:
                     o2 = self._state_cache[key1]["prior_o"]
                 else:
                     ts2 = records_times[i-1]
-                    sti = self._state_time_index.bisect_key_left(recon_lw.time_stamp_key(ts2) + "_" + key1)
+                    sti = self._state_time_index.bisect_key_left(f"{recon_lw.time_stamp_key(ts2)}_{key1}")
                     o2 = self._state_time_index[sti][3]
-            tech = {"key1" :key1, "ts1": ts1,"state_cache": self._state_cache.get(key1)}
+            tech = {"key1": key1, "ts1": ts1, "state_cache": self._state_cache.get(key1)}
             self._interpret_func([o1, o2, tech], self._custom_settings, self._create_event, self._send_events)
 
         if horizon_time is not None:
             edge_timestamp = {"epochSecond": horizon_time["epochSecond"] - self._horizon_delay_seconds,
                               "nano": 0}
-            state_edge = self._state_time_index.bisect_key_left(recon_lw.time_stamp_key(edge_timestamp)+"_")
+            state_edge = self._state_time_index.bisect_key_left(f"{recon_lw.time_stamp_key(edge_timestamp)}_")
         else:
             state_edge = len(self._state_time_index)
 
