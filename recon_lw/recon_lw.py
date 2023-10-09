@@ -21,8 +21,8 @@ def ts_to_epoch_nano_str(ts):
 
 def time_stamp_key(ts):
     return 1_000_000_000 * ts["epochSecond"] + ts["nano"]
-    #nanos_str = str(ts["nano"]).zfill(9)
-    #return str(ts["epochSecond"]) + "." + nanos_str
+    # nanos_str = str(ts["nano"]).zfill(9)
+    # return str(ts["epochSecond"]) + "." + nanos_str
 
 
 def time_index_add(key, m, time_index):
@@ -371,20 +371,20 @@ def open_scoped_events_streams(
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
     files = listdir(streams_path)
     files.sort()
-    scopes_streams: Dict[str, Data] = {}
+    # This part to replace Data+Data to Data([Data,Data])
+    scopes_streams_temp: Dict[str, list] = {}
     for f in files:
         if ".pickle" not in f:
             continue
         if name_filter is not None and not name_filter(f):
             continue
         scope = f[:f.index("_scope_")]
-        if scope not in scopes_streams:
-            scopes_streams[scope] = Data.from_cache_file(path.join(streams_path, f))
+        if scope not in scopes_streams_temp:
+            scopes_streams_temp[scope] = [Data.from_cache_file(path.join(streams_path, f))]
         else:
-            # 2023.09.28 -- tmp change to fix a bug https://exactpro.atlassian.net/browse/TH2-5091
-            # scopes_streams[scope] += Data.from_cache_file(path.join(streams_path, f))
-            scopes_streams[scope] = scopes_streams[scope] + Data.from_cache_file(path.join(streams_path, f))
+            scopes_streams_temp[scope].append(Data.from_cache_file(path.join(streams_path, f)))
 
+    scopes_streams: Dict[str, Data] = {scope: Data(scopes_streams_temp[scope]) for scope in scopes_streams_temp}
     for strm in scopes_streams.values():
         if data_filter:
             strm = strm.filter(data_filter)
