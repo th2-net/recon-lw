@@ -52,6 +52,7 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
         if len(result) > 0:
             result["operation"] = operation.__name__
             result["operation_params"] = initial_parameters
+            result["initial_book"] = initial_book
             result["resulting_book"] = ob_copy(book)
             result["book_id"] = book_id
             result["sessionId"] = mess["sessionId"]
