@@ -38,7 +38,7 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
     #events.append(debug_event)
 
     for operation, parameters, mess in operations_batch:
-        #initial_book = ob_copy(book) #copy.deepcopy(book)
+        initial_book = ob_copy(book) #copy.deepcopy(book)
         initial_parameters = parameters.copy() #copy.copy(parameters)
         parameters["order_book"] = book
         if "v" not in book:
