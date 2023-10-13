@@ -23,7 +23,7 @@ def ob_compare_stats_get_state_ts_key_order(o, settings):
 
 def ob_compare_stats_interpret(match: List, custom_settings, create_event, save_events):
     if match[1] is None:
-        error_event = create_event("StatsNotFound" + match[0]["messageType"],
+        error_event = create_event("StatsNotFound" + options.smfr.get_type(options.mfr.get_body(match[0])),
                                    "StatsNotFound",
                                    False,
                                    {"stats_message": match[0],
