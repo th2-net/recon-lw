@@ -454,7 +454,7 @@ def ob_trade_order(order_id: str, traded_price: float, traded_size: int, str_tim
         old_side, old_price, old_size = find_order_position(order_id, order_book)
         log = []
         if old_side is None:
-            return {"error": order_id + " not found"}, []
+            return {"error": f"{order_id} not found"}, []
         if traded_size > old_size:
             return {"error": "traded size > resting size"}, []
         elif traded_size == old_size:
