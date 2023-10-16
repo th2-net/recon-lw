@@ -303,8 +303,7 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
         gap_event = recon_lw.create_event("SeqGap:" + rule_settings["rule_root_event"]["eventName"], "SeqGap",
                                           event_sequence, ok=False,
                                           body={"sessionId": rule_settings["sessionId"], 
-                                                "gaps": gaps,
-                                                "chunk_ts": ts},
+                                                "gaps": gaps},
                                           parentId=rule_settings["rule_root_event"]["eventId"])
         save_events_func([gap_event])
     
