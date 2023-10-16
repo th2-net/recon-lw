@@ -221,12 +221,12 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
         mess = m[1]
         # process gaps TODO better way to add sessionId to gap event
         if "gap" in mess:
-            gap_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"], "SeqGap",
-                                              event_sequence, ok=False,
-                                              body={"seq_num": seq,
-                                                    "sessionId": messages_chunk[0]['sessionId']},
-                                              parentId=parent_event["eventId"])
-            events.append(gap_event)
+            #gap_event = recon_lw.create_event("SeqGap:" + parent_event["eventName"], "SeqGap",
+            #                                  event_sequence, ok=False,
+            #                                  body={"seq_num": seq,
+            #                                        "sessionId": messages_chunk[0]['sessionId']},
+            #                                  parentId=parent_event["eventId"])
+            #events.append(gap_event)
             n_processed += 1
             continue
         messages_chunk.extend(options.mfr.expand_message(mess))
@@ -296,6 +296,16 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
                                        "log_books_filter"] if "log_books_filter" in rule_settings else None,
                                    rule_settings[
                                        "aggregate_batch_updates"] if "aggregate_batch_updates" in rule_settings else False)
+    
+    ## Gaps
+    gaps = rule_settings["sequence_cache"].get_next_gaps()
+    if len(gaps) > 0:
+        gap_event = recon_lw.create_event("SeqGap:" + rule_settings["rule_root_event"]["eventName"], "SeqGap",
+                                          event_sequence, ok=False,
+                                          body={"gaps": gaps},
+                                          parentId=rule_settings["rule_root_event"]["eventId"])
+        save_events_func([gap_event])
+    
     ## Process duplicated
     # duplicates = rule_settings["sequence_cache"]["duplicates"]
     duplicates = rule_settings["sequence_cache"].get_duplicates_collection()

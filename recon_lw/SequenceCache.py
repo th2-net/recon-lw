@@ -12,7 +12,16 @@ class SequenceCache:
 
         self._time_indexes = {}
         self._objects = {}
+        self._gaps = []
+        self._last_processed_seq_num = 0
 
+    def get_next_gaps(self):
+        if len(self._gaps) == 0:
+            return []
+        
+        next_gaps = self._gaps
+        self._gaps = []
+        return next_gaps
 
     def add_object(self, seq_num: int, ts: dict, o: dict) -> None:
         if seq_num in self._objects:
@@ -28,6 +37,10 @@ class SequenceCache:
             elif seq_num > min_max[1]:
                 min_max[1] = seq_num
         self._objects[seq_num] = o
+        if self._last_processed_seq_num < seq_num:
+            if self._last_processed_seq_num + 1 < seq_num:
+                self._gaps.append((self._last_processed_seq_num + 1, seq_num - 1))
+            self._last_processed_seq_num = seq_num
         return
         seq_element = (seq_num, o)
         # gaps = sequence_cache["gaps"]
