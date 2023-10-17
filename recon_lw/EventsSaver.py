@@ -48,9 +48,10 @@ class EventsSaver:
             if len(self._scopes_buffers[scope]) > 50000:
                 self.flush_scope(scope)
 
-    def create_event(self, name, type, ok=True, body=None, parentId=None, attached_messages=None):
+    def create_event(self, name, type, ok=True, body=None, parentId=None, attached_messages=None, ts = None):
         attached_messages = attached_messages or []
-        ts = datetime.now()
+        if ts is None:
+            ts = datetime.now()
         e = {"eventId": self._create_event_id(),
              "successful": ok,
              "eventName": name,

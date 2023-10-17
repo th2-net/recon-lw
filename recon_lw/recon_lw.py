@@ -451,3 +451,16 @@ def get_next_batch(streams: SortedKeyList[Tuple[dict, Iterator, Optional[dict]]]
         except StopIteration as e:
             continue
     return batch_pos
+
+
+def sync_stream(streams: SortedKeyList[Tuple[dict, Iterator, Optional[dict]]],
+                get_timestamp_func):
+    while  len(streams) > 0:
+        next_stream = streams.pop(0)
+        try:
+            if next_stream[2] is not None:
+                yield next_stream[2]
+            o = next(next_stream[1])
+            streams.add((get_timestamp_func(o), next_stream[1], o))
+        except StopIteration as e:
+            continue
