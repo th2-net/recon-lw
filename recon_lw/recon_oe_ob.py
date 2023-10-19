@@ -1,4 +1,8 @@
 from datetime import datetime
+from typing import Optional
+
+from th2_data_services.data import Data
+
 from recon_lw import recon_lw
 from recon_lw.EventsSaver import EventsSaver
 from recon_lw import recon_ob_cross_stream
@@ -7,11 +11,11 @@ from recon_lw.message_utils import message_to_dict
 from recon_lw.StateSequenceGenerator import StateSequenceGenerator
 
 
-def process_order_states(message_pickle_path, sessions_list, result_events_path, settings,
-                         data_objects=None):
+def process_order_states(message_pickle_path: Optional[str], sessions_list: Optional[list],
+                         result_events_path: str, settings: dict, data_objects: list[Data] = None):
     events_saver = EventsSaver(result_events_path)
     root_event = events_saver.create_event(
-        "recon_lw_oe_ob_order_states_images " + datetime.now().isoformat(), "Microservice")
+        f"recon_lw_oe_ob_order_states_images {datetime.now().isoformat()}", "Microservice")
     events_saver.save_events([root_event])
 
     if data_objects:
@@ -55,12 +59,11 @@ def oe_er_state_update(er, current_state, create_event, send_events):
     current_state["last_er"] = er
 
 
-def process_oe_md_comparison(ob_events_path, oe_images_events_path, md_sessions_list,
-                             result_events_path,
-                             horizon_delay_seconds, is_book_open, keeper):
+def process_oe_md_comparison(ob_events_path: str, oe_images_events_path: str, md_sessions_list: list,
+                             result_events_path: str,
+                             horizon_delay_seconds: int, is_book_open, keeper):
     events_saver = EventsSaver(result_events_path)
-    root_event = events_saver.create_event("recon_lw_oe_ob_compare" + datetime.now().isoformat(),
-                                           "Microservice")
+    root_event = events_saver.create_event(f"recon_lw_oe_ob_compare{datetime.now().isoformat()}", "Microservice")
     events_saver.save_events([root_event])
 
     def create_event(n, t, ok, b, am=None):
@@ -97,11 +100,11 @@ def process_oe_md_comparison(ob_events_path, oe_images_events_path, md_sessions_
     events_saver.flush()
 
 
-def oe_ob_get_timestamp_key1_key2(o, custom_settings):
+def oe_ob_get_timestamp_key1_key2(o: dict, custom_settings: dict) -> tuple[Optional[dict],Optional[str],Optional[str]]:
     keeper = custom_settings['orders_keeper']
     if o["eventType"] == "OrderBook":
         if "order_id" in o["body"]["operation_params"]:
-            order_id = o["body"]["operation_params"]["order_id"]
+            order_id: int = o["body"]["operation_params"]["order_id"]
             if order_id and int(order_id) not in keeper:
                 # Exclude orders from unknown users
                 return None, None, None
@@ -121,12 +124,12 @@ def oe_ob_get_timestamp_key1_key2(o, custom_settings):
         return None, None, None
 
 
-def clear_bookid(book_id):
+def clear_bookid(book_id: str) -> int:
     book_id = book_id.split("(", maxsplit=1)[0]
-    return book_id
+    return int(book_id)
 
 
-def oe_ob_interpret_func(match, custom_settings, create_event, send_events):
+def oe_ob_interpret_func(match: tuple[Optional[dict], Optional[dict]], custom_settings, create_event, send_events):
     attached_messages = []
     if match[0] is not None and match[1] is not None:
         operation_problem = None
