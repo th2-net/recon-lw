@@ -10,7 +10,7 @@ from recon_lw.EventsSaver import EventsSaver
 from th2_data_services.config import options
 
 
-def epoch_nano_str_to_ts(s_nanos):
+def epoch_nano_str_to_ts(s_nanos: str) -> dict[str, int]:
     nanos = int(s_nanos)
     return {"epochSecond": nanos // 1_000_000_000, "nano": nanos % 1_000_000_000}
 
@@ -393,7 +393,8 @@ def open_scoped_events_streams(
     return streams
 
 
-def open_streams(streams_path, name_filter=None, expanded_messages=False, data_objects=None):
+def open_streams(streams_path: Optional[str], name_filter=None,
+                 expanded_messages: bool = False, data_objects: list[Data] = None):
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
 
     if data_objects:
@@ -424,7 +425,7 @@ def open_streams(streams_path, name_filter=None, expanded_messages=False, data_o
 
 
 def get_next_batch(streams: SortedKeyList[Tuple[dict, Iterator, Optional[dict]]],
-                   batch: List[dict], b_len, get_timestamp_func) -> int:
+                   batch: List[Optional[dict]], b_len, get_timestamp_func) -> int:
     """
 
     Args:
@@ -455,7 +456,7 @@ def get_next_batch(streams: SortedKeyList[Tuple[dict, Iterator, Optional[dict]]]
 
 def sync_stream(streams: SortedKeyList[Tuple[dict, Iterator, Optional[dict]]],
                 get_timestamp_func):
-    while  len(streams) > 0:
+    while len(streams) > 0:
         next_stream = streams.pop(0)
         try:
             if next_stream[2] is not None:
