@@ -10,7 +10,7 @@ from recon_lw.EventsSaver import EventsSaver
 from th2_data_services.config import options
 
 
-def epoch_nano_str_to_ts(s_nanos: str) -> dict[str, int]:
+def epoch_nano_str_to_ts(s_nanos: str) -> Dict[str, int]:
     nanos = int(s_nanos)
     return {"epochSecond": nanos // 1_000_000_000, "nano": nanos % 1_000_000_000}
 
@@ -394,7 +394,7 @@ def open_scoped_events_streams(
 
 
 def open_streams(streams_path: Optional[str], name_filter=None,
-                 expanded_messages: bool = False, data_objects: list[Data] = None):
+                 expanded_messages: bool = False, data_objects: List[Data] = None):
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
 
     if data_objects:
