@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Tuple
 
 from th2_data_services.data import Data
 
@@ -12,7 +12,7 @@ from recon_lw.StateSequenceGenerator import StateSequenceGenerator
 
 
 def process_order_states(message_pickle_path: Optional[str], sessions_list: Optional[list],
-                         result_events_path: str, settings: dict, data_objects: list[Data] = None):
+                         result_events_path: str, settings: dict, data_objects: List[Data] = None):
     events_saver = EventsSaver(result_events_path)
     root_event = events_saver.create_event(
         f"recon_lw_oe_ob_order_states_images {datetime.now().isoformat()}", "Microservice")
@@ -100,7 +100,7 @@ def process_oe_md_comparison(ob_events_path: str, oe_images_events_path: str, md
     events_saver.flush()
 
 
-def oe_ob_get_timestamp_key1_key2(o: dict, custom_settings: dict) -> tuple[Optional[dict],Optional[str],Optional[str]]:
+def oe_ob_get_timestamp_key1_key2(o: dict, custom_settings: dict) -> Tuple[Optional[dict], Optional[str], Optional[str]]:
     keeper = custom_settings['orders_keeper']
     if o["eventType"] == "OrderBook":
         if "order_id" in o["body"]["operation_params"]:
@@ -129,7 +129,7 @@ def clear_bookid(book_id: str) -> int:
     return int(book_id)
 
 
-def oe_ob_interpret_func(match: tuple[Optional[dict], Optional[dict]], custom_settings, create_event, send_events):
+def oe_ob_interpret_func(match: Tuple[Optional[dict], Optional[dict]], custom_settings, create_event, send_events):
     attached_messages = []
     if match[0] is not None and match[1] is not None:
         operation_problem = None
