@@ -103,11 +103,11 @@ def process_oe_md_comparison(ob_events_path: str, oe_images_events_path: str, md
 def oe_ob_get_timestamp_key1_key2(o: dict, custom_settings: dict) -> Tuple[Optional[dict], Optional[str], Optional[str]]:
     keeper = custom_settings['orders_keeper']
     if o["eventType"] == "OrderBook":
-        if "order_id" in o["body"]["operation_params"]:
+        if o["body"]["operation_params"].get('order_id'):
             order_id: int = o["body"]["operation_params"]["order_id"]
-            if order_id and int(order_id) not in keeper:
-                # Exclude orders from unknown users
-                return None, None, None
+            # if order_id and int(order_id) not in keeper:
+            #     # Exclude orders from unknown users
+            #     return None, None, None
             str_toe = o["body"]["operation_params"]["str_time_of_event"]
             ts = recon_lw.epoch_nano_str_to_ts(str_toe)
             return ts, f'{str_toe}.{order_id}.{o["body"]["otv"]}', None
