@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Callable
 
 from th2_data_services.data import Data
 
@@ -54,9 +54,43 @@ def process_order_states(message_pickle_path: Optional[str], sessions_list: Opti
     events_saver.flush()
 
 
-def oe_er_state_update(er, current_state, create_event, send_events):
+def get_order_type(er: dict) -> int:
+    # FIXME: change message_to_dict to resolvers
+    mm = message_to_dict(er)
+    if recon_lw.protocol(er) == "FIX":
+        return int(mm["OrdType"])
+    else:
+        return int(mm["OrderType"])
+
+
+def get_exec_type(er: dict) -> str:
+    # FIXME: change message_to_dict to resolvers
+    mm = message_to_dict(er)
+    return str(mm["ExecType"])
+
+
+def oe_er_state_update(er: Tuple[int, dict], current_state: dict, create_event: Callable,
+                       send_events: Callable) -> None:
+    """
+    Function updates current_state according msg in er.
+    current_state is object that stores previous state of an order.
+    :param er: (int msg sequence, dict with message fields)
+    :param current_state: {"no_state": bool flag - False if there is previous msg in chain,
+                           "last_er": dict with previous msg in chain fields,
+                           "active": if msg represents an order on book}
+    :param create_event: (not used for now)function to create events
+    :param send_events: (not used for now)function to store events
+    :return: None. Function updates current_state without any return.
+    """
     current_state["no_state"] = False
     current_state["last_er"] = er
+    if 'active' not in current_state:
+        current_state['active'] = False
+    er_type: int = get_order_type(er[1])
+    er_exec_type: str = get_exec_type(er[1])
+    if not current_state['active'] and ((er_type in {1, 2} and er_exec_type == '0') or
+                                        (er_type in {3, 4} and er_exec_type == 'L')):
+        current_state['active'] = True
 
 
 def process_oe_md_comparison(ob_events_path: str, oe_images_events_path: str, md_sessions_list: list,
@@ -100,7 +134,8 @@ def process_oe_md_comparison(ob_events_path: str, oe_images_events_path: str, md
     events_saver.flush()
 
 
-def oe_ob_get_timestamp_key1_key2(o: dict, custom_settings: dict) -> Tuple[Optional[dict], Optional[str], Optional[str]]:
+def oe_ob_get_timestamp_key1_key2(o: dict, custom_settings: dict) -> \
+        Tuple[Optional[dict], Optional[str], Optional[str]]:
     keeper = custom_settings['orders_keeper']
     if o["eventType"] == "OrderBook":
         if o["body"]["operation_params"].get('order_id'):
@@ -172,7 +207,7 @@ def oe_ob_interpret_func(match: Tuple[Optional[dict], Optional[dict]], custom_se
         send_events([ev])
 
 
-def oe_ob_get_timestamp(o):
+def oe_ob_get_timestamp(o: dict) -> dict:
     return o["body"]["timestamp"]
 
 
@@ -265,15 +300,7 @@ def get_transact_time(er):
         return recon_lw.epoch_nano_str_to_ts(mm["TransactTime"])
 
 
-def get_order_type(er):
-    mm = message_to_dict(er)
-    if recon_lw.protocol(er) == "FIX":
-        return int(mm["OrdType"])
-    else:
-        return int(mm["OrderType"])
-
-
-def get_order_status(er):
+def get_order_status(er: dict) -> int:
     mm = message_to_dict(er)
     if recon_lw.protocol(er) == "FIX":
         return int(mm["OrdStatus"])
@@ -281,22 +308,22 @@ def get_order_status(er):
         return int(mm["OrderStatus"])
 
 
-def get_instrument_id(er):
+def get_instrument_id(er: dict) -> int:
     mm = message_to_dict(er)
-    return mm["SecurityID"]
+    return int(mm["SecurityID"])
 
 
-def get_order_id(er):
+def get_order_id(er: dict) -> int:
     mm = message_to_dict(er)
-    return mm["OrderID"]
+    return int(mm["OrderID"])
 
 
-def get_side(er):
+def get_side(er: dict) -> str:
     mm = message_to_dict(er)
     return "bid" if mm["Side"] == 1 else "ask"
 
 
-def report_add_order(er, v: int, create_event):
+def report_add_order(er: dict, v: int, create_event: Callable):
     body = {"operation": "ob_add_order",
             "operation_params": {"instr": get_instrument_id(er),
                                  "order_id": get_order_id(er),
@@ -309,7 +336,7 @@ def report_add_order(er, v: int, create_event):
     return create_event("OEMDImage", "OEMDImage", True, body)
 
 
-def report_delete_order(er, v: int, create_event, str_time_of_event=None):
+def report_delete_order(er: dict, v: int, create_event, str_time_of_event=None):
     tov = recon_lw.ts_to_epoch_nano_str(
         get_transact_time(er)) if str_time_of_event is None else str_time_of_event
     body = {"operation": "ob_delete_order",
@@ -320,7 +347,7 @@ def report_delete_order(er, v: int, create_event, str_time_of_event=None):
     return create_event("OEMDImage", "OEMDImage", True, body)
 
 
-def report_update_order(er, v: int, create_event):
+def report_update_order(er: dict, v: int, create_event: Callable):
     body = {"operation": "ob_update_order",
             "operation_params": {"instr": get_instrument_id(er),
                                  "order_id": get_order_id(er),
@@ -332,7 +359,7 @@ def report_update_order(er, v: int, create_event):
     return create_event("OEMDImage", "OEMDImage", True, body)
 
 
-def report_trade_order(er, v: int, create_event):
+def report_trade_order(er: dict, v: int, create_event: Callable):
     body = {"operation": "ob_trade_order",
             "operation_params": {"instr": get_instrument_id(er),
                                  "order_id": get_order_id(er),
