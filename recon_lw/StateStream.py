@@ -29,15 +29,15 @@ class StateStream:
             ts = tpl[1]
             action = tpl[2]
             state = tpl[3]
-            snap_id = self.get_snapshot_id_func(state)
+            snap_id = self._get_snapshot_id_func(state)
             if last_ts is not None:
                 if not self._combine_instantenious_snapshots:
                     for k in updated_snapshots:
-                        yield self.create_snapshot_event(last_ts, snapshots_collection[k]) #(last_ts, snapshots_collection[k])
+                        yield self.create_snapshot_event(last_ts, snapshots_collection[k], updated_snapshots) #(last_ts, snapshots_collection[k])
                     updated_snapshots.clear()
                 elif recon_lw.time_stamp_key(ts) != recon_lw.time_stamp_key(last_ts):
                     for k in updated_snapshots:
-                        yield self.create_snapshot_event(last_ts, snapshots_collection[k]) #(last_ts, snapshots_collection[k])
+                        yield self.create_snapshot_event(last_ts, snapshots_collection[k], updated_snapshots) #(last_ts, snapshots_collection[k])
                     updated_snapshots.clear()
                     
             if snap_id is None:
@@ -52,9 +52,10 @@ class StateStream:
                                                           "StateStreamError", False,
                                                           {'update': tpl})
                     self._events_saver.save_events([err])
-                snapshot[key] = state
-                updated_snapshots.add(snap_id)
-                last_ts = ts
+                else:
+                    snapshot[key] = state
+                    updated_snapshots.add(snap_id)
+                    last_ts = ts
             elif action == 'u':
                 if key not in snapshot:
                     # Consistency error
@@ -62,10 +63,11 @@ class StateStream:
                                                           "StateStreamError", False,
                                                           {'update': tpl})
                     self._events_saver.save_events([err])
-                state = self._state_transition_func(state, snapshot[key])
-                snapshot[key] = state
-                updated_snapshots.add(snap_id)
-                last_ts = ts
+                else:
+                    state = self._state_transition_func(state, snapshot[key])
+                    snapshot[key] = state
+                    updated_snapshots.add(snap_id)
+                    last_ts = ts
             elif action == 'd':
                 if key not in snapshot:
                     # Consistency error
@@ -73,11 +75,12 @@ class StateStream:
                                                           "StateStreamError", False,
                                                           {'update': tpl})
                     self._events_saver.save_events([err])
-                snapshot.pop(key)
-                updated_snapshots.add(snap_id)
-                last_ts = ts
+                else:
+                    snapshot.pop(key)
+                    updated_snapshots.add(snap_id)
+                    last_ts = ts
         for k in updated_snapshots:
-            yield self.create_snapshot_event(last_ts, snapshots_collection[k]) #(last_ts, snapshots_collection[k])
+            yield self.create_snapshot_event(last_ts, snapshots_collection[k], updated_snapshots) #(last_ts, snapshots_collection[k])
         updated_snapshots.clear()
 
     def create_snapshot_event(self, ts, snap_id, snapshot_source):
@@ -142,7 +145,7 @@ def get_next_update_oe(m):
     sec_id = int(m['body']['fields']["SecurityID"])
     unelected_stop = False
     if exec_type == '0':
-        op = 'a'
+        op = 'c'
         if ord_type == '4':
             unelected_stop = True
         #if m['body']['fields']["OrdStatus"]
