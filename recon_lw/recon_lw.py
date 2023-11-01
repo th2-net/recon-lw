@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Iterable, List, Tuple, Iterator, Optional, Dict
+from typing import Iterable, List, Tuple, Iterator, Optional, Dict, Any
 
 from sortedcontainers import SortedKeyList
 from th2_data_services.data import Data
@@ -142,18 +142,25 @@ def flush_old(current_ts, horizon_delay, time_index):
 
 # match_compare_func takes m1, m2  returns e
 # end_events_func tekes iterable of events
-def rule_flush(current_ts, horizon_delay, match_index, time_index, message_cache,
+def rule_flush(current_ts, horizon_delay, match_index: dict, time_index, message_cache,
                interpret_func, event_sequence, send_events_func, parent_event, live_orders_cache):
     old_keys = flush_old(current_ts, horizon_delay, time_index)
     events = []
-    for k in old_keys:
-        elem = match_index.pop(k)
+    for match_key in old_keys:
+        elem = match_index.pop(match_key)  # elem -- can have 2 or 3 elements inside
         if elem[0] is not None and elem[0] not in message_cache:
             # request already processed through different key
             continue
 
-        results = interpret_func([message_cache_pop(item, message_cache) for item in elem],
-                                 live_orders_cache, event_sequence)
+        # interpret_func function has exact format
+        #   arg0 - list of matched messages
+        #   arg1 - ??
+        #   arg2 - EventSequence
+        results = interpret_func(
+            [message_cache_pop(item, message_cache) for item in elem],
+            live_orders_cache,
+            event_sequence
+        )
         #       result = interpret_func(message_cache_pop(elem[0], message_cache),
         #                                message_cache_pop(elem[1], message_cache), event_sequence)
         if results is not None:
@@ -184,26 +191,32 @@ def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
 
 
 # {"first_key_func":..., "second_key_func",... "interpret_func"}
-def execute_standalone(message_pickle_path, sessions_list, result_events_path, rules_settings_dict,
+def execute_standalone(message_pickle_path, sessions_list, result_events_path,
+                       rules_settings_dict: Dict[str, Dict[str, Any]],
                        data_objects=None):
     """Entrypoint for recon-lw.
 
     If you provide data_objects, message_pickle_path -- will be ignored.
 
-    :param message_pickle_path:
-    :param sessions_list:
-    :param result_events_path:
-    :param rules_settings_dict:
-    :param data_objects:
-    :return:
+
+    Args:
+        message_pickle_path:
+        sessions_list:
+        result_events_path:
+        rules_settings_dict: { ReconRuleName: {}, ... }
+        data_objects:
+
+    Returns:
+
     """
-    events_buffer = []
     box_ts = datetime.now()
     events_saver = EventsSaver(result_events_path)
     event_sequence = {"name": "recon_lw", "stamp": str(box_ts.timestamp()), "n": 0}
     root_event = create_event("recon_lw " + box_ts.isoformat(), "Microservice", event_sequence)
 
     events_saver.save_events([root_event])
+    # TODO -- rule_settings -- will be changed to Class.
+    #   We should leave backward compatibility with current DICT solution.
     for rule_key, rule_settings in rules_settings_dict.items():
         rule_settings["rule_root_event"] = create_event(rule_key, "LwReconRule",
                                                         event_sequence,
@@ -227,8 +240,9 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path, r
         else:
             streams = open_streams(message_pickle_path)
 
-    message_buffer = [None] * 100
     buffer_len = 100
+    message_buffer = [None] * buffer_len
+
     while len(streams) > 0:
         next_batch_len = get_next_batch(streams, message_buffer, buffer_len,
                                         lambda m: m["timestamp"])
@@ -393,8 +407,12 @@ def open_scoped_events_streams(
     return streams
 
 
-def open_streams(streams_path: Optional[str], name_filter=None,
-                 expanded_messages: bool = False, data_objects: List[Data] = None):
+def open_streams(
+        streams_path: Optional[str],
+        name_filter=None,
+        expanded_messages: bool = False,
+        data_objects: List[Data] = None
+) -> SortedKeyList[Tuple[dict, Iterator, Optional[dict]]]:
     streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
 
     if data_objects:
