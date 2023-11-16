@@ -1,3 +1,4 @@
+import abc
 from datetime import datetime, timedelta
 from typing import Iterable, List, Tuple, Iterator, Optional, Dict, Any
 
@@ -188,6 +189,70 @@ def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
          "startTimestamp": {"epochSecond": int(ts.timestamp()), "nano": ts.microsecond * 1000},
          "attachedMessageIds": []}
     return e
+
+
+class RuleSettings:
+    """Prototype of the RuleSettings class.
+
+    This class will be used instead of current Dict settings config.
+    This class should be backward-compatible with current Dict settings config solution.
+
+
+    It describes
+        - configuration function interfaces.
+        - ...
+    """
+
+    def __init__(self):
+        """
+        TODO - every parameter should be described in detail.
+
+        """
+        self.horizon_delay = None
+        self.match_index = None
+        self.time_index = None
+        self.message_cache = None
+        self.rule_root_event = None
+        self.live_orders_cache = None
+
+    @abc.abstractmethod
+    def interpret_func(self, match, _, event_sequence):
+        pass
+
+    @abc.abstractmethod
+    def rule_match_func(self, next_batch, rule_dict):
+        pass
+
+    @abc.abstractmethod
+    def first_key_func(self, message):
+        pass
+
+    @abc.abstractmethod
+    def second_key_func(self, message):
+        pass
+
+    def flush_func(self, ts, event_sequence, save_events_func):
+        """
+        TODO - description is required.
+
+        Args:
+            ts:  ??
+            event_sequence:  ??
+            save_events_func: a function that will store result events to (file/DB/..).
+
+        Returns:
+
+        """
+        rule_flush(current_ts=ts,
+                   horizon_delay=self.horizon_delay,
+                   match_index=self.match_index,
+                   time_index=self.time_index,
+                   message_cache=self.message_cache,
+                   interpret_func=self.interpret_func,
+                   event_sequence=event_sequence,
+                   send_events_func=save_events_func,
+                   parent_event=self.rule_root_event,
+                   live_orders_cache=self.live_orders_cache)
 
 
 # {"first_key_func":..., "second_key_func",... "interpret_func"}
@@ -398,7 +463,8 @@ def open_scoped_events_streams(
         else:
             scopes_streams_temp[scope].append(Data.from_cache_file(path.join(streams_path, f)))
 
-    scopes_streams: Dict[str, Data] = {scope: Data(scopes_streams_temp[scope]) for scope in scopes_streams_temp}
+    scopes_streams: Dict[str, Data] = {scope: Data(scopes_streams_temp[scope])
+                                       for scope in scopes_streams_temp}
     for strm in scopes_streams.values():
         if data_filter:
             strm = strm.filter(data_filter)
