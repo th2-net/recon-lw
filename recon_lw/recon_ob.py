@@ -386,6 +386,10 @@ def ob_add_order(order_id: str, price: float, size: int, side: str, str_time_of_
     return {}, [ob_copy(order_book)]
 
 
+def get_not_found_error(order_id):
+    return {"error": f"{order_id} not found"}
+
+
 def ob_update_order(order_id: str, price: float, size: int, str_time_of_event,
                     order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
@@ -395,7 +399,7 @@ def ob_update_order(order_id: str, price: float, size: int, str_time_of_event,
 
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
-        return {"error": order_id + " not found"}, []
+        return get_not_found_error(order_id), []
 
     if price == old_price and size == old_size:
         return {"error": "order update to identical parameters"}, []
@@ -432,7 +436,7 @@ def ob_delete_order(order_id: str, str_time_of_event, order_book: dict) -> tuple
 
     old_side, old_price, old_size = find_order_position(order_id, order_book)
     if old_side is None:
-        return {"error": order_id + " not found"}, []
+        return get_not_found_error(order_id), []
 
     log = []
     reflect_price_update_in_version(old_side, old_price, str_time_of_event, order_book)
@@ -465,7 +469,7 @@ def ob_trade_order(order_id: str, traded_price: float, traded_size: int, str_tim
         old_side, old_price, old_size = find_order_position(order_id, order_book)
         log = []
         if old_side is None:
-            return {"error": f"{order_id} not found"}, []
+            return get_not_found_error(order_id), []
         if traded_size > old_size:
             return {"error": "traded size > resting size"}, []
         elif traded_size == old_size:
