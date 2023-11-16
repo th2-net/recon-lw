@@ -137,19 +137,22 @@ def process_oe_md_comparison(ob_events_path: str, oe_images_events_path: str, md
 def oe_ob_get_timestamp_key1_key2(o: dict, custom_settings: dict) -> \
         Tuple[Optional[dict], Optional[str], Optional[str]]:
     keeper = custom_settings['orders_keeper']
+    is_book_open = custom_settings["is_book_open"]
     if o["eventType"] == "OrderBook":
+        book_id = clear_bookid(o['body']['book_id'])
+        str_toe = o["body"]["operation_params"]["str_time_of_event"]
+        ts = recon_lw.epoch_nano_str_to_ts(str_toe)
+        if not is_book_open(str(book_id), ts):
+            return None, None, None
         if o["body"]["operation_params"].get('order_id'):
             order_id: int = o["body"]["operation_params"]["order_id"]
             # if order_id and int(order_id) not in keeper:
             #     # Exclude orders from unknown users
             #     return None, None, None
-            str_toe = o["body"]["operation_params"]["str_time_of_event"]
-            ts = recon_lw.epoch_nano_str_to_ts(str_toe)
             return ts, f'{str_toe}.{order_id}.{o["body"]["otv"]}', None
         else:
             return None, None, None
     elif o["eventType"] == "OEMDImage":
-        is_book_open = custom_settings["is_book_open"]
         str_toe = o["body"]["operation_params"]["str_time_of_event"]
         ts = recon_lw.epoch_nano_str_to_ts(str_toe)
         if not is_book_open(o["body"]["operation_params"]["instr"], ts):
