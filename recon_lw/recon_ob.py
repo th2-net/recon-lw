@@ -319,6 +319,8 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
                                      event_sequence,
                                      ok=False,
                                      body={"seq_num": item[0],
+                                           "msg1": item[1],
+                                           "msg2": item[2],
                                            "sessionId": rule_settings["sessionId"]},
                                      parentId=rule_settings["rule_root_event"]["eventId"])
         d_ev["attachedMessageIds"] = [item[1]["messageId"], item[2]["messageId"]]
