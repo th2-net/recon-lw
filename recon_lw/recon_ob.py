@@ -393,7 +393,7 @@ def get_not_found_error(order_id):
 
 
 def ob_update_order(order_id: str, price: float, size: int, str_time_of_event,
-                    order_book: dict) -> tuple:
+                    order_book: dict, side: str) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
