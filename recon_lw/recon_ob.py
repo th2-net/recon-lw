@@ -430,7 +430,7 @@ def ob_update_order(order_id: str, price: float, size: int, str_time_of_event,
     return {}, log
 
 
-def ob_delete_order(order_id: str, str_time_of_event, order_book: dict) -> tuple:
+def ob_delete_order(order_id: str, str_time_of_event, order_book: dict, side: str) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
