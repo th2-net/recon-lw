@@ -389,7 +389,7 @@ def ob_add_order(order_id: str, price: float, size: int, side: str, str_time_of_
 
 
 def get_not_found_error(order_id):
-    return {"error": f"{order_id} not found"}
+    return {"error": f"Order {order_id} not found on book"}
 
 
 def ob_update_order(order_id: str, price: float, size: int, str_time_of_event,
