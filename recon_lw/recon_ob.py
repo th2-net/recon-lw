@@ -698,36 +698,42 @@ def ob_top_clean_book(str_time_of_event, order_book: dict) -> tuple:
     return {}, [ob_copy(order_book)]
 
 
-def process_trade(trade_price: float, order_book: dict):
+def process_trade(trade_price: float, traded_qty: int, order_book: dict):
     errors = {}
+    # Fill price related fields
     if "max_price" not in order_book or order_book["max_price"] is None:
         order_book["max_price"] = trade_price
-
     if "min_price" not in order_book or order_book["min_price"] is None:
         order_book["min_price"] = trade_price
-
     if "open_price" not in order_book or order_book["open_price"] is None:
         order_book["open_price"] = trade_price
-
     order_book["last_price"] = trade_price
     if trade_price > order_book["max_price"]:
         order_book["max_price"] = trade_price
     if trade_price < order_book["min_price"]:
         order_book["min_price"] = trade_price
+
+    # Fill qty related fields
+    if not order_book.get('total_traded_qty'):
+        order_book['total_traded_qty'] = 0
+    order_book['total_traded_qty'] += traded_qty
+    order_book['last_traded_qty'] = traded_qty
+
+    # Count trades
     if "total_n_trades" not in order_book:
-        order_book["total_n_trades"] = 1
-    else:
-        order_book["total_n_trades"] += 1
+        order_book["total_n_trades"] = 0
+    order_book["total_n_trades"] += 1
+
     return errors
 
 
-def ob_market_data_trade(trade_price: float, str_time_of_event, order_book: dict):
+def ob_market_data_trade(trade_price: float, traded_qty: int, str_time_of_event, order_book: dict):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
         reset_aggr_seq(order_book)
 
-    errors = process_trade(trade_price, order_book)
+    errors = process_trade(trade_price, traded_qty, order_book)
 
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["top_delta"] = 1
