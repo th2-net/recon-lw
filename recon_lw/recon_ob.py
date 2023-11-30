@@ -462,7 +462,7 @@ def ob_trade_order(order_id: str, traded_price: float, traded_size: int, str_tim
     else:
         reset_aggr_seq(order_book)
 
-    errors = process_trade(traded_price, order_book)
+    errors = process_trade(traded_price, traded_size, order_book)
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["top_delta"] = 1
