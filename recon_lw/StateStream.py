@@ -34,13 +34,11 @@ class StateStream:
             if last_ts is not None:
                 if not self._combine_instantenious_snapshots:
                     for k in updated_snapshots:
-                        yield self.create_snapshot_event(last_ts, snapshots_collection[k],
-                                                         updated_snapshots)  # (last_ts, snapshots_collection[k])
+                        yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
                     updated_snapshots.clear()
                 elif recon_lw.time_stamp_key(ts) != recon_lw.time_stamp_key(last_ts):
                     for k in updated_snapshots:
-                        yield self.create_snapshot_event(last_ts, snapshots_collection[k],
-                                                         updated_snapshots)  # (last_ts, snapshots_collection[k])
+                        yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
                     updated_snapshots.clear()
 
             if snap_id is None:
@@ -49,7 +47,7 @@ class StateStream:
                 snapshots_collection[snap_id] = {}
             snapshot = snapshots_collection[snap_id]
             if action == 'c':
-                if key in snapshot:  # TODO - perhaps there is should be key NOT IN snapshot ?
+                if key in snapshot:
                     # Consistency error
                     err = self._events_saver.create_event("ObjectAlreadyPresent",
                                                           "StateStreamError", False,
@@ -83,8 +81,7 @@ class StateStream:
                     updated_snapshots.add(snap_id)
                     last_ts = ts
         for k in updated_snapshots:
-            yield self.create_snapshot_event(last_ts, snapshots_collection[k],
-                                             updated_snapshots)  # (last_ts, snapshots_collection[k])
+            yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
         updated_snapshots.clear()
 
     def create_snapshot_event(self, ts, snap_id, snapshot_source):
