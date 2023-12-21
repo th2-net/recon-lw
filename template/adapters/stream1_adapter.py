@@ -13,7 +13,15 @@ def get_field_func(field):
 
 
 class Stream1Adapter(IBaseAdapter):
+
     def init_mapping(self) -> Dict[str, FieldGetterFunc]:
+        """
+        Recommendations:
+            1. Use pairwise names like `msgField1_msgField2` if you have
+            different names for the same field in the messages
+            # TODO -- probably it's better to use some Enum here instead
+
+        """
         return {
             'field1': get_field_func('field1'),
             'msgField1_msgField2': get_field_func('field1'),
@@ -25,3 +33,9 @@ class Stream1Adapter(IBaseAdapter):
                 "OrderID": self.get(m, "order_id"),
                 "ClOrdID": self.get(m, "clordid"),
             }
+
+    def on_message(self, m):
+        pass
+
+    def on_message_exit(self, m):
+        pass
