@@ -55,7 +55,9 @@ def get_interpret_func(
 
 def _get_miss_event(msg, event_name_prefix,
                     match_key,
-                    recon_type: ReconType, counters: Counters):
+                    recon_type: ReconType, counters: Counters,
+                    order_ids,
+                    event_sequence):
     if recon_type == ReconType.BasicReconMissLeft:
         counters.no_left += 1
         name = f"{event_name_prefix}_[no_left]"
@@ -66,8 +68,6 @@ def _get_miss_event(msg, event_name_prefix,
         raise Exception('unexpected behaviour')
 
     body = {"key": match_key}
-    # TODO -- get_fields_group что это ???
-    order_ids = orig_adapter.get_fields_group(msg, "order_ids")
 
     if order_ids:
         body["order_ids"] = order_ids
@@ -161,11 +161,14 @@ def compare_2_msgs(
         # )
         # event["attachedMessageIds"] = [msg1["messageId"]]
 
+        order_ids = orig_adapter.get_fields_group(msg1, "order_ids")
         match_key = first_key_func(msg1)
         event = _get_miss_event(msg2, event_name_prefix,
                                 match_key=match_key,
                                 recon_type=ReconType.BasicReconMissLeft,
-                                counters=counters)
+                                counters=counters,
+                                order_ids=order_ids,
+                                event_sequence=event_sequence)
         events.append(event)
         orig_adapter.on_message_exit(msg1)
 
@@ -189,11 +192,14 @@ def compare_2_msgs(
         # event["attachedMessageIds"] = [m["messageId"] for m in match_msgs if
         #                                m is not None]
 
+        order_ids = copy_adapter.get_fields_group(msg2, "order_ids")
         match_key = second_key_func(msg2)
         event = _get_miss_event(msg2, event_name_prefix,
                                 match_key=match_key,
                                 recon_type=ReconType.BasicReconMissRight,
-                                counters=counters)
+                                counters=counters,
+                                order_ids=order_ids,
+                                event_sequence=event_sequence)
         events.append(event)
         copy_adapter.on_message_exit(msg2)
 
