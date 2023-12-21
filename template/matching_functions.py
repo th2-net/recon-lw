@@ -88,7 +88,8 @@ def get_matching_key(adapter: IBaseAdapter, item, *fields, sep=":"):
 
 
 def basic_matching_key_fun(
-        is_orig, adapter: IBaseAdapter, fields, filter_fun=None, session=None,
+        is_orig, adapter: IBaseAdapter, fields,
+        filter_fun=None, session=None,
         alias_categorizer=None, alias_category=None
 ):
     if not filter_fun:
