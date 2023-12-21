@@ -144,7 +144,8 @@ def flush_old(current_ts, horizon_delay, time_index):
 # match_compare_func takes m1, m2  returns e
 # end_events_func tekes iterable of events
 def rule_flush(current_ts, horizon_delay, match_index: dict, time_index, message_cache,
-               interpret_func, event_sequence, send_events_func, parent_event, live_orders_cache):
+               interpret_func, event_sequence: dict, send_events_func,
+               parent_event, live_orders_cache):
     old_keys = flush_old(current_ts, horizon_delay, time_index)
     events = []
     for match_key in old_keys:
@@ -172,12 +173,12 @@ def rule_flush(current_ts, horizon_delay, match_index: dict, time_index, message
     send_events_func(events)
 
 
-def create_event_id(event_sequence):
+def create_event_id(event_sequence: dict):
     event_sequence["n"] += 1
     return event_sequence["name"] + "_" + event_sequence["stamp"] + "-" + str(event_sequence["n"])
 
 
-def create_event(name, type, event_sequence, ok=True, body=None, parentId=None):
+def create_event(name, type, event_sequence: dict, ok=True, body=None, parentId=None):
     # TODO - description is required.
     ts = datetime.now()
     e = {"eventId": create_event_id(event_sequence),
@@ -216,7 +217,18 @@ class RuleSettings:
         self.live_orders_cache = None
 
     @abc.abstractmethod
-    def interpret_func(self, match, _, event_sequence):
+    def interpret_func(self, match_msgs: List[dict], _, event_sequence: dict):
+        """
+
+        Args:
+            match_msgs: list of matched messages
+            _:
+            event_sequence: some dict that looks like
+                {"name": "recon_lw", "stamp": str(box_ts.timestamp()), "n": 0}
+
+        Returns:
+
+        """
         pass
 
     @abc.abstractmethod
@@ -231,7 +243,7 @@ class RuleSettings:
     def second_key_func(self, message):
         pass
 
-    def flush_func(self, ts, event_sequence, save_events_func):
+    def flush_func(self, ts, event_sequence: dict, save_events_func):
         """
         TODO - description is required.
 
@@ -276,6 +288,7 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path,
     """
     box_ts = datetime.now()
     events_saver = EventsSaver(result_events_path)
+    # TODO - let's use an Object maybe instead of dict for event_sequence?
     event_sequence = {"name": "recon_lw", "stamp": str(box_ts.timestamp()), "n": 0}
     root_event = create_event("recon_lw " + box_ts.isoformat(), "Microservice", event_sequence)
 
@@ -340,7 +353,7 @@ def collect_matcher(batch, rule_settings):
         rule_settings["live_orders_cache"].process_objects_batch(batch)
 
 
-def flush_matcher(ts, rule_settings, event_sequence, save_events_func):
+def flush_matcher(ts, rule_settings, event_sequence: dict, save_events_func):
     rule_flush(ts,
                rule_settings["horizon_delay"],
                rule_settings["match_index"],
