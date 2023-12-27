@@ -331,7 +331,7 @@ def init_ob_stream(rule_settings: dict) -> None:
     #                               "duplicates": SortedKeyList(key=lambda item: item[0])}
     if "initial_snapshot_stream" in rule_settings:
         snapshots_stream = rule_settings["initial_snapshot_stream"]
-        expanded_stream = (mm for m in snapshots_stream for mm in message_utils.expand_message(m))
+        expanded_stream = (mm for m in snapshots_stream for mm in options.mfr.expand_message(m))
         expanded_stream_iter = iter(expanded_stream)
         books, start_seq_id = read_snapshot(expanded_stream_iter,
                                             rule_settings["snapshot_stop_func"],
