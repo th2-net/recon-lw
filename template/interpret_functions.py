@@ -163,7 +163,7 @@ def compare_2_msgs(
 
         order_ids = orig_adapter.get_fields_group(msg1, "order_ids")
         match_key = first_key_func(msg1)
-        event = _get_miss_event(msg2, event_name_prefix,
+        event = _get_miss_event(msg1, event_name_prefix,
                                 match_key=match_key,
                                 recon_type=ReconType.BasicReconMissLeft,
                                 counters=counters,
