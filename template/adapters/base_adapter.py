@@ -3,7 +3,7 @@ from typing import Callable, Dict, Any
 
 Msg = dict
 FieldVal = Any
-FieldGetterFunc: Callable[[Msg], FieldVal]
+FieldGetterFunc = Callable[[Msg], FieldVal]
 
 
 # class a:
@@ -59,7 +59,7 @@ class IBaseAdapter(ABC):
     def get(self, item, field, strict=False):
         actual_field = self.mapping[field]
         if isinstance(actual_field, Callable):
-            val = actual_field(item, field)
+            val = actual_field(item)
         else:
             val = item[self.body_field].get(actual_field, self.NE)
 
