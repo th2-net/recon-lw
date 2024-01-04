@@ -1,5 +1,9 @@
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Callable
+
 from sortedcontainers import SortedKeyList
+from th2_data_services.data import Data
 from th2_data_services.utils.message_utils import message_utils
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
@@ -168,6 +172,27 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
                 obs[i]["aggr_seq"]["limit_v2"] = -1
 
 
+class RuleSettings:
+    def __init__(self, snapshot_stop_func: Callable, get_book_id_func: Callable, update_book_rule: Callable,
+                 check_book_rule: Callable, events_saver: EventsSaver, rule_root_event: dict, initial_book_params: dict,
+                 event_sequence: dict):
+        self.event_sequence = event_sequence
+        self.initial_book_params = initial_book_params
+        self.rule_root_event = rule_root_event
+        self.events_saver = events_saver
+        self.check_book_rule = check_book_rule
+        self.update_book_rule = update_book_rule
+        self.get_book_id_func = get_book_id_func
+        self.snapshot_stop_func = snapshot_stop_func
+        self.additional_settings = {}
+
+    def set(self, name, value):
+        self.additional_settings[name] = value
+
+    def get(self, name):
+        return self.additional_settings.get(name)
+
+
 def read_snapshots_stream_until_stop(expanded_snapshots_stream_iter, snapshot_stop_func, stop_status):
     for m in expanded_snapshots_stream_iter:
         is_it_stop, seq_id, session_id, stop_msg_id = snapshot_stop_func(m)
@@ -176,7 +201,6 @@ def read_snapshots_stream_until_stop(expanded_snapshots_stream_iter, snapshot_st
             stop_status["sequence_id"] = seq_id
             stop_status["session_id"] = session_id
             stop_status["stop_msg_id"] = stop_msg_id
-
             yield m
             return
         yield m
@@ -184,38 +208,51 @@ def read_snapshots_stream_until_stop(expanded_snapshots_stream_iter, snapshot_st
     stop_status["sequence_id"] = None
 
 
-def read_snapshot(expanded_snapshots_stream_iter, snapshot_stop_func, get_book_id_func, update_book_rule,
-                  check_book_rule, initial_book_params, parent_event, events_saver: EventsSaver, saveEvents=True):
+def read_snapshot(expanded_snapshots_stream_iter, rule_settings, saveEvents=True):
     status = {}
     books = {}
-    terminated_stream = read_snapshots_stream_until_stop(expanded_snapshots_stream_iter,
-                                                         snapshot_stop_func, status)
-    process_market_data_update(terminated_stream, books, get_book_id_func,
-                               update_book_rule, check_book_rule, initial_book_params,
-                               parent_event, events_saver, None, None, False)
+    events = []
+    log_books_collection = []
+    terminated_stream = read_snapshots_stream_until_stop(
+        expanded_snapshots_stream_iter, rule_settings.snapshot_stop_func, status)
+    process_market_data_update(
+        mess_batch=terminated_stream,
+        events=events,
+        books_cache=books,
+        get_book_id_func=rule_settings.get_book_id_func,
+        update_book_rule=rule_settings.update_book_rule,
+        check_book_rule=rule_settings.check_book_rule,
+        event_sequence=rule_settings.event_sequence,
+        parent_event=rule_settings.rule_root_event,
+        initial_book_params=rule_settings.initial_book_params,
+        log_books_filter=rule_settings.get('log_books_filter'),
+        log_books_collection=log_books_collection,
+        aggregate_batch_updates=rule_settings.get('aggregate_batch_updates')
+    )
     if status["snapshot_done"]:
         if saveEvents:
             for book_id, book in books.items():
-                log_event = events_saver.create_event("OrderBookSnap:" + status["session_id"],
-                                                      "OrderBookSnap",
-                                                      ok=True,
-                                                      body={"book_id": book_id, "book": book},
-                                                      parentId=parent_event["eventId"])
+                log_event = rule_settings.events_saver.create_event(
+                    "OrderBookSnap:" + status["session_id"],
+                    "OrderBookSnap",
+                    ok=True,
+                    body={"book_id": book_id, "book": book},
+                    parentId=rule_settings.parent_event["eventId"])
                 if status["stop_msg_id"] is not None:
                     log_event["attachedMessageIds"] = [status["source_msg_id"]]
                 log_event["scope"] = status["session_id"]
-                events_saver.save_events([log_event])
-
+                rule_settings.events_saver.save_events([log_event])
         return books, status["sequence_id"]
     else:
         return None, None
 
 
-def read_all_snapshots(snapshots_stream, snapshot_stop_func,
-                       get_book_id_func, update_book_rule,
-                       check_book_rule, initial_book_params,
-                       result_events_path):
+def read_all_snapshots(snapshots_stream: Data, snapshot_stop_func: Callable,
+                       get_book_id_func: Callable, update_book_rule: Callable,
+                       check_book_rule: Callable, initial_book_params: dict,
+                       result_events_path: Path):
     box_ts = datetime.now()
+    event_sequence = {"name": "recon_lw", "stamp": str(box_ts.timestamp()), "n": 0}
     events_saver = EventsSaver(result_events_path)
     root_event = events_saver.create_event("recon_ob_snapshots " + box_ts.isoformat(), "Microservice")
     events_saver.save_events([root_event])
@@ -223,10 +260,14 @@ def read_all_snapshots(snapshots_stream, snapshot_stop_func,
     expanded_stream = (mm for m in snapshots_stream for mm in options.mfr.expand_message(m))
     expanded_stream_iter = iter(expanded_stream)
     books = {}
+    rule_settings = RuleSettings(
+        snapshot_stop_func, get_book_id_func, update_book_rule, check_book_rule,
+        events_saver, root_event, initial_book_params, event_sequence)
     while books is not None:
-        books, seq_id = read_snapshot(expanded_stream_iter, snapshot_stop_func, get_book_id_func,
-                                      update_book_rule, check_book_rule, initial_book_params,
-                                      root_event, events_saver, True)
+        books, seq_id = read_snapshot(
+            expanded_snapshots_stream_iter=expanded_stream_iter,
+            rule_settings=rule_settings,
+            saveEvents=True)
 
 
 def process_market_data_update(mess_batch, events, books_cache, get_book_id_func, update_book_rule,
