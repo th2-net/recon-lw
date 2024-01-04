@@ -237,9 +237,9 @@ def read_snapshot(expanded_snapshots_stream_iter, rule_settings, saveEvents=True
                     "OrderBookSnap",
                     ok=True,
                     body={"book_id": book_id, "book": book},
-                    parentId=rule_settings.parent_event["eventId"])
+                    parentId=rule_settings.rule_root_event["eventId"])
                 if status["stop_msg_id"] is not None:
-                    log_event["attachedMessageIds"] = [status["source_msg_id"]]
+                    log_event["attachedMessageIds"] = [status["stop_msg_id"]]
                 log_event["scope"] = status["session_id"]
                 rule_settings.events_saver.save_events([log_event])
         return books, status["sequence_id"]
