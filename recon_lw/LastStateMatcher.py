@@ -1,11 +1,20 @@
+from typing import Callable, Any, Tuple, Optional
+
 from sortedcontainers import SortedKeyList
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
 
+from recon_lw._types import Th2Timestamp
+
 
 class LastStateMatcher:
-    def __init__(self, horizon_delay_seconds, get_search_ts_key,
-                 get_state_ts_key_order, interpret_func, custom_settings, create_event,
+    def __init__(self,
+                 horizon_delay_seconds: int,
+                 get_search_ts_key: Callable[[Any, Any], Tuple[Optional[Th2Timestamp], Any]],
+                 get_state_ts_key_order: Callable[[Any, Any], Tuple[Optional[Th2Timestamp], Any, int]],
+                 interpret_func: Callable,
+                 custom_settings,
+                 create_event,
                  send_events):
         self._search_time_index = SortedKeyList(key=lambda t: recon_lw.time_stamp_key(t[0]))
 

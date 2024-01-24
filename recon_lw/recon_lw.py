@@ -4,6 +4,8 @@ from typing import Iterable, List, Tuple, Iterator, Optional, Dict, Any
 
 from sortedcontainers import SortedKeyList
 from th2_data_services.data import Data
+
+from recon_lw._types import Th2Timestamp
 from recon_lw.message_utils import message_to_dict
 from os import listdir
 from os import path
@@ -16,11 +18,11 @@ def epoch_nano_str_to_ts(s_nanos: str) -> Dict[str, int]:
     return {"epochSecond": nanos // 1_000_000_000, "nano": nanos % 1_000_000_000}
 
 
-def ts_to_epoch_nano_str(ts):
+def ts_to_epoch_nano_str(ts: Th2Timestamp):
     return f'{ts["epochSecond"]}{str(ts["nano"]).zfill(9)}'
 
 
-def time_stamp_key(ts):
+def time_stamp_key(ts: Th2Timestamp):
     return 1_000_000_000 * ts["epochSecond"] + ts["nano"]
     # nanos_str = str(ts["nano"]).zfill(9)
     # return str(ts["epochSecond"]) + "." + nanos_str
