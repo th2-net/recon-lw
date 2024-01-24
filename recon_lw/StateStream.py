@@ -201,7 +201,7 @@ def mnc_oe_state_stream_compare(match, custom_settings, create_event, save_event
                                 False,  # result of comparison
                                 {"mnc_event": match[0],
                                  "diff": {}})  # comparison result
-    # result_event["attachedMessageIds"] = [match[0]["messageId"]]
+    # result_event["attachedMessageIds"] = [match_msgs[0]["messageId"]]
     save_events([result_event])
 
 
