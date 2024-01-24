@@ -75,8 +75,8 @@ class TimeCacheMatcher:
             #if horizon_edge > 0:
             #    for n in range(horizon_edge):
             #        nxt = self._time_index.pop(0)
-            #        match = self._match_index.pop(nxt[1])
-            #        self._interpret_func(match, self._custom_settings, self._create_event, self._send_events)
+            #        match_msgs = self._match_index.pop(nxt[1])
+            #        self._interpret_func(match_msgs, self._custom_settings, self._create_event, self._send_events)
             #        if self._debug:
             #            self.debug({"processor": self._get_timestamp_key1_key2.__name__, "event": "key processed",
             #                        "key": nxt, "ts": stream_time})
