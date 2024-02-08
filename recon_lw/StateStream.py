@@ -1,19 +1,37 @@
+from typing import Callable, Any, Tuple
+
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
 from recon_lw.SequenceCache import SequenceCache
-from recon_lw.EventsSaver import EventsSaver
+from recon_lw.EventsSaver import EventsSaver, IEventsSaver
 from datetime import datetime
 from recon_lw.LastStateMatcher import LastStateMatcher
+from recon_lw._types import Th2Timestamp
 
 
 class StateStream:
-    def __init__(self, get_next_update_func, get_snapshot_id_func, state_transition_func,
-                 events_saver, combine_instantenious_snapshots=True) -> None:
+    def __init__(self,
+                 get_next_update_func: Callable[[Any], Tuple[str, Th2Timestamp, str, Any]],  # Shoudl return (key, ts, op, state)
+                 get_snapshot_id_func,
+                 state_transition_func,
+                 events_saver: IEventsSaver,
+                 combine_instantenious_snapshots=True
+                 ) -> None:
+        """
+
+        Args:
+            get_next_update_func:
+                func that should return key, ts, action, state
+            get_snapshot_id_func:
+            state_transition_func:
+            events_saver:
+            combine_instantenious_snapshots:
+        """
         self._get_next_update_func = get_next_update_func
         self._get_snapshot_id_func = get_snapshot_id_func
         self._state_transition_func = state_transition_func
         self._combine_instantenious_snapshots = combine_instantenious_snapshots
-        self._events_saver: EventsSaver = events_saver
+        self._events_saver = events_saver
 
     def state_updates(self, stream):
         for o in stream:
@@ -22,13 +40,31 @@ class StateStream:
                 yield (key, ts, action, state)
 
     def snapshots(self, stream):
+        """It is expected sorted stream.
+
+        Returns and at the same time stores events to disc.
+        Events format -- look at `create_snapshot_event`.
+        """
+
+        # snapshots_collection = {snap_id: {key: state}}
+        #   snap_id -- usually some InstrumentId
+        #   key - ??  usually OrderID
+        #   state -- something like. Can be any object that describes state.
+        #       {'s': str(e['body']['data']["Side"]),
+        #        'p': float(e['body']['data']["Price"]),
+        #        'q': int(e['body']['data']["OrderQty"]),
+        #        'sec': sec_id,
+        #        'src': e}
+        # if snap_id -- InstrumentId & key -- OrderID
+        #   that means that we have OrderBook for every Instrument, and we know
+        #   the state of every order.
         snapshots_collection = {}
         updated_snapshots = set()
         last_ts = None
         for tpl in self.state_updates(stream):
             key = tpl[0]
             ts = tpl[1]
-            action = tpl[2]
+            action = tpl[2]  # Todo -- it's better to use Enum for this.
             state = tpl[3]
             snap_id = self._get_snapshot_id_func(state)
             if last_ts is not None:

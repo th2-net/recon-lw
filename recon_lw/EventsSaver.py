@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 from recon_lw import recon_lw
 from datetime import datetime, timedelta
 from th2_data_services.data import Data
@@ -6,9 +8,30 @@ import os
 
 import pickle
 
-class EventsSaver:
+
+class IEventsSaver(ABC):
+    @abstractmethod
+    def flush(self):
+        pass
+
+    @abstractmethod
+    def flush_scope(self, scope):
+        pass
+
+    @abstractmethod
+    def save_events(self, batch):
+        pass
+
+    @abstractmethod
+    def create_event(self, name, type, ok=True, body=None, parentId=None,
+                     attached_messages=None, ts=None):
+        pass
+
+
+class EventsSaver(IEventsSaver):
     def __init__(self, path):
-        self._event_sequence = {"name": "recon_lw", "stamp": str(datetime.now().timestamp()), "n": 0}
+        self._event_sequence = {"name": "recon_lw",
+                                "stamp": str(datetime.now().timestamp()), "n": 0}
         self._scopes_buffers = {}
         self._path = path
         #temp test
@@ -48,7 +71,8 @@ class EventsSaver:
             if len(self._scopes_buffers[scope]) > 50000:
                 self.flush_scope(scope)
 
-    def create_event(self, name, type, ok=True, body=None, parentId=None, attached_messages=None, ts = None):
+    def create_event(self, name, type, ok=True, body=None, parentId=None,
+                     attached_messages=None, ts=None):
         attached_messages = attached_messages or []
         if ts is None:
             ts = datetime.now()
@@ -58,7 +82,8 @@ class EventsSaver:
              "eventType": type,
              "body": body,
              "parentEventId": parentId,
-             "startTimestamp": {"epochSecond": int(ts.timestamp()), "nano": ts.microsecond * 1000},
+             "startTimestamp": {"epochSecond": int(ts.timestamp()),
+                                "nano": ts.microsecond * 1000},
              "attachedMessageIds": attached_messages}
         return e
 
