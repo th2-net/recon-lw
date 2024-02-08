@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Any, Tuple, Optional, Union, TypeVar, TypeGuard
+from typing import Callable, Any, Tuple, Optional, Union
 
 from sortedcontainers import SortedKeyList
 from recon_lw import recon_lw
