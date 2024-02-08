@@ -13,7 +13,7 @@ from recon_lw.EventsSaver import EventsSaver
 from th2_data_services.config import options
 
 
-def epoch_nano_str_to_ts(s_nanos: str) -> Dict[str, int]:
+def epoch_nano_str_to_ts(s_nanos: str) -> Th2Timestamp:
     nanos = int(s_nanos)
     return {"epochSecond": nanos // 1_000_000_000, "nano": nanos % 1_000_000_000}
 
@@ -22,7 +22,7 @@ def ts_to_epoch_nano_str(ts: Th2Timestamp):
     return f'{ts["epochSecond"]}{str(ts["nano"]).zfill(9)}'
 
 
-def time_stamp_key(ts: Th2Timestamp):
+def time_stamp_key(ts: Th2Timestamp) -> int:
     return 1_000_000_000 * ts["epochSecond"] + ts["nano"]
     # nanos_str = str(ts["nano"]).zfill(9)
     # return str(ts["epochSecond"]) + "." + nanos_str
@@ -274,6 +274,16 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path,
                        rules_settings_dict: Dict[str, Dict[str, Any]],
                        data_objects=None):
     """Entrypoint for recon-lw.
+
+    It generates ReconEvents and stores them in the `result_events_path` file
+    to disc in pickle format.
+
+    It matches messages 1 to 1 or 1 to many  (depends on `rule_match_func` param
+    in the config).
+    When messages were matched or unmatched, the list of [msg1, *msgs2] will be
+    passed to interp_func.
+    msg1 and *msgs2 can be None if no match message was found.
+    It's not possible case when all msgs are None.
 
     If you provide data_objects, message_pickle_path -- will be ignored.
 
