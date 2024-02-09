@@ -1,6 +1,6 @@
 from typing import Callable, Any, Tuple, Iterator
 
-import recon_lw.ts_converters
+from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
 from recon_lw.SequenceCache import SequenceCache
@@ -73,7 +73,7 @@ class StateStream:
                     for k in updated_snapshots:
                         yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
                     updated_snapshots.clear()
-                elif recon_lw.ts_converters.time_stamp_key(ts) != recon_lw.ts_converters.time_stamp_key(last_ts):
+                elif time_stamp_key(ts) != time_stamp_key(last_ts):
                     for k in updated_snapshots:
                         yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
                     updated_snapshots.clear()
@@ -153,7 +153,7 @@ def order_updates_ts(m):
     if is_it_fix(m):
         return ts_from_fix_transacttime(m['body']['fields']['TransactTime'])
     else:
-        return recon_lw.ts_converters.epoch_nano_str_to_ts(m['body']['fields']['TransactTime'])
+        return epoch_nano_str_to_ts(m['body']['fields']['TransactTime'])
 
 
 def state_transition_oe(new_s, old_s):
@@ -175,7 +175,7 @@ def get_next_update_oe(m):
     if is_fix:
         ts = ts_from_fix_transacttime(m['body']['fields']['TransactTime'])
     else:
-        ts = recon_lw.ts_converters.epoch_nano_str_to_ts(m['body']['fields']['TransactTime'])
+        ts = epoch_nano_str_to_ts(m['body']['fields']['TransactTime'])
     exec_type = str(m['body']['fields']["ExecType"])
     ord_status = m['body']['fields']["OrdStatus"] if is_fix else str(
         m['body']['fields']["OrderStatus"])

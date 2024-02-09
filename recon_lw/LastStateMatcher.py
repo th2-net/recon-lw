@@ -3,7 +3,8 @@ from typing import Callable, Any, Tuple, Optional, Union
 
 from sortedcontainers import SortedKeyList
 
-import recon_lw.ts_converters
+from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
+
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
 
@@ -151,13 +152,13 @@ class LastStateMatcher:
             create_event:
             send_events:
         """
-        self._search_time_index = SortedKeyList(key=lambda t: recon_lw.ts_converters.time_stamp_key(t[0]))
+        self._search_time_index = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
 
         # {key2 : { "prior_ts" : ts, "prior_obj" ; obj, SortedKeyList(timestamps)}  }
         self._state_cache = {}
 
         # sorted list of tuples(ts, key2, order, object)
-        self._state_time_index = SortedKeyList(key=lambda t: f"{recon_lw.ts_converters.time_stamp_key(t[0])}_{t[1]}")
+        self._state_time_index = SortedKeyList(key=lambda t: f"{time_stamp_key(t[0])}_{t[1]}")
 
         # Note, we don't use a function to define the handler functions, because
         #   the function don't provide IDE type hinting.
@@ -198,7 +199,7 @@ class LastStateMatcher:
     def _state_cache_add_item(self, ts, key2):
         if key2 not in self._state_cache:
             self._state_cache[key2] = {"prior_ts": None, "prior_o": None,
-                                       "records_times": SortedKeyList(key=recon_lw.ts_converters.time_stamp_key)}
+                                       "records_times": SortedKeyList(key=time_stamp_key)}
         self._state_cache[key2]["records_times"].add(ts)
 
     def _state_cache_delete_item(self, ts, key2, o):
@@ -231,12 +232,12 @@ class LastStateMatcher:
             ts2, key2, order = self._get_state_ts_key_order(o, self._custom_settings)
             if key2 is not None:
                 stream_time = ts2
-                index_key = f"{recon_lw.ts_converters.time_stamp_key(ts2)}_{key2}"
+                index_key = f"{time_stamp_key(ts2)}_{key2}"
                 i = self._state_time_index.bisect_key_left(index_key)
                 current_len = len(self._state_time_index)
                 next_key = None
                 if i < current_len:
-                    next_key = f"{recon_lw.ts_converters.time_stamp_key(self._state_time_index[i][0])}_{self._state_time_index[i][1]}"
+                    next_key = f"{time_stamp_key(self._state_time_index[i][0])}_{self._state_time_index[i][1]}"
                 if i == current_len or index_key != next_key:
                     self._state_time_index.add([ts2, key2, order, o])
                     self._state_cache_add_item(ts2, key2)
@@ -255,7 +256,7 @@ class LastStateMatcher:
             edge_timestamp = {"epochSecond": horizon_time["epochSecond"] - self._horizon_delay_seconds,
                               "nano": 0}
             search_edge = self._search_time_index.bisect_key_left(
-                recon_lw.ts_converters.time_stamp_key(edge_timestamp))
+                time_stamp_key(edge_timestamp))
         else:
             search_edge = len(self._search_time_index)
 
@@ -270,13 +271,13 @@ class LastStateMatcher:
             else:
                 records_times = self._state_cache[key1]["records_times"]
                 i = records_times.bisect_key_right(
-                    recon_lw.ts_converters.time_stamp_key(ts1))
+                    time_stamp_key(ts1))
                 if i == 0:
                     o2 = self._state_cache[key1]["prior_o"]
                 else:
                     ts2 = records_times[i-1]
                     sti = self._state_time_index.bisect_key_left(
-                        f"{recon_lw.ts_converters.time_stamp_key(ts2)}_{key1}")
+                        f"{time_stamp_key(ts2)}_{key1}")
                     o2 = self._state_time_index[sti][3]
             tech = {"key1": key1,
                     "ts1": ts1,
@@ -292,7 +293,7 @@ class LastStateMatcher:
         if horizon_time is not None:
             edge_timestamp = {"epochSecond": horizon_time["epochSecond"] - self._horizon_delay_seconds,
                               "nano": 0}
-            state_edge = self._state_time_index.bisect_key_left(f"{recon_lw.ts_converters.time_stamp_key(edge_timestamp)}_")
+            state_edge = self._state_time_index.bisect_key_left(f"{time_stamp_key(edge_timestamp)}_")
         else:
             state_edge = len(self._state_time_index)
 

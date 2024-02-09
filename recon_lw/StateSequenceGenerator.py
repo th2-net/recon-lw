@@ -2,7 +2,8 @@ from typing import Callable
 
 from sortedcontainers import SortedKeyList
 
-import recon_lw.ts_converters
+from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
+
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
 from recon_lw.SequenceCache import SequenceCache
@@ -60,7 +61,7 @@ class StateSequenceGenerator:
             for o in next_chunk:
                 key, ts, new_key = self._object_key_ts_extract(o)
                 if key is not None:
-                    ts_key = recon_lw.ts_converters.time_stamp_key(ts)
+                    ts_key = time_stamp_key(ts)
                     if ts_key not in arranged:
                         arranged[ts_key] = {}
                     chained_key = key
