@@ -1,5 +1,6 @@
-from typing import Callable, Any, Tuple
+from typing import Callable, Any, Tuple, Iterator
 
+import recon_lw.ts_converters
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
 from recon_lw.SequenceCache import SequenceCache
@@ -39,7 +40,7 @@ class StateStream:
             if key is not None:
                 yield (key, ts, action, state)
 
-    def snapshots(self, stream):
+    def snapshots(self, stream) -> Iterator[dict[str, Any]]:
         """It is expected sorted stream.
 
         Returns and at the same time stores events to disc.
@@ -72,7 +73,7 @@ class StateStream:
                     for k in updated_snapshots:
                         yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
                     updated_snapshots.clear()
-                elif recon_lw.time_stamp_key(ts) != recon_lw.time_stamp_key(last_ts):
+                elif recon_lw.ts_converters.time_stamp_key(ts) != recon_lw.ts_converters.time_stamp_key(last_ts):
                     for k in updated_snapshots:
                         yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
                     updated_snapshots.clear()
@@ -152,7 +153,7 @@ def order_updates_ts(m):
     if is_it_fix(m):
         return ts_from_fix_transacttime(m['body']['fields']['TransactTime'])
     else:
-        return recon_lw.epoch_nano_str_to_ts(m['body']['fields']['TransactTime'])
+        return recon_lw.ts_converters.epoch_nano_str_to_ts(m['body']['fields']['TransactTime'])
 
 
 def state_transition_oe(new_s, old_s):
@@ -174,7 +175,7 @@ def get_next_update_oe(m):
     if is_fix:
         ts = ts_from_fix_transacttime(m['body']['fields']['TransactTime'])
     else:
-        ts = recon_lw.epoch_nano_str_to_ts(m['body']['fields']['TransactTime'])
+        ts = recon_lw.ts_converters.epoch_nano_str_to_ts(m['body']['fields']['TransactTime'])
     exec_type = str(m['body']['fields']["ExecType"])
     ord_status = m['body']['fields']["OrdStatus"] if is_fix else str(
         m['body']['fields']["OrderStatus"])
@@ -249,11 +250,11 @@ def get_mnc_oe_state_ts(o):
     return None
 
 
-def create_oe_snapshots_streams(oe_streams, result_events_path):
+def create_oe_snapshots_streams(oe_streams, result_events_path, buffer_len=100):
     events_saver = EventsSaver(result_events_path)
     filtered_streams = [stream.filter(order_updates_filter) for stream in oe_streams]
     strm_list = recon_lw.open_streams(None, None, False, filtered_streams)
-    m_stream = recon_lw.sync_stream(strm_list, order_updates_ts)
+    m_stream = strm_list.sync_stream(order_updates_ts)
     state_stream = StateStream(get_next_update_oe,
                                get_snapshot_id_oe,
                                state_transition_oe,
@@ -272,10 +273,10 @@ def create_oe_snapshots_streams(oe_streams, result_events_path):
     stream2 = state_stream.snapshots(m_stream)
     streams = recon_lw.open_streams(None, data_objects=[stream1, stream2])
 
-    message_buffer = [None] * 100
-    buffer_len = 100
+    message_buffer = [None] * buffer_len
+
     while len(streams) > 0:
-        next_batch_len = recon_lw.get_next_batch(streams, message_buffer, buffer_len,
+        next_batch_len = streams.get_next_batch(message_buffer, buffer_len,
                                                  get_mnc_oe_state_ts)
         buffer_to_process = message_buffer
         if next_batch_len < buffer_len:

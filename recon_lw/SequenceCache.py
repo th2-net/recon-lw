@@ -1,11 +1,13 @@
 from sortedcontainers import SortedKeyList
+
+import recon_lw.ts_converters
 from recon_lw import recon_lw
 
 
 class SequenceCache:
     def __init__(self, horizon_delay_seconds):
         self._sequence = SortedKeyList(key=lambda item: item[0])
-        self._times = SortedKeyList(key=lambda t: recon_lw.time_stamp_key(t[0]))
+        self._times = SortedKeyList(key=lambda t: recon_lw.ts_converters.time_stamp_key(t[0]))
         self._duplicates = []#= SortedKeyList(key=lambda item: item[0])
         self._horizon_delay_seconds = horizon_delay_seconds
         self._debug = False
@@ -47,6 +49,7 @@ class SequenceCache:
             self._last_processed_seq_num = seq_num
             self._last_processesd_seq_num_ts = ts
         return
+        # TODO - unreachable code?
         seq_element = (seq_num, o)
         # gaps = sequence_cache["gaps"]
         gap = {"gap": True}
@@ -101,11 +104,14 @@ class SequenceCache:
                 end = min_max[1]
         
         return self.yeild_objects(start, end)
+
+        # TODO - unreachable code?
         
         if current_ts is not None:
             edge_timestamp = {"epochSecond": current_ts["epochSecond"] - self._horizon_delay_seconds,
                               "nano": 0}
-            horizon_edge = self._times.bisect_key_left(recon_lw.time_stamp_key(edge_timestamp))
+            horizon_edge = self._times.bisect_key_left(
+                recon_lw.ts_converters.time_stamp_key(edge_timestamp))
             if horizon_edge < len(self._times):
                 seq_index = self._times[horizon_edge][1]
                 sub_seq = self._sequence.irange(None, (seq_index, None), (False, False))
@@ -121,6 +127,7 @@ class SequenceCache:
 
     def clear_processed_chunk(self, processed_len: int) -> None:
         return
+        # TODO - unreachable code?
         for i in range(0, processed_len):
             self._sequence.pop(0)
 

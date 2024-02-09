@@ -2,11 +2,14 @@ from abc import ABC, abstractmethod
 from typing import Callable, Any, Tuple, Optional, Union
 
 from sortedcontainers import SortedKeyList
+
+import recon_lw.ts_converters
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
 
 from recon_lw.EventsSaver import IEventsSaver
 from recon_lw._types import Th2Timestamp
+from recon_lw.stream import Streams
 
 
 class IInterpretHandler(ABC):
@@ -101,7 +104,9 @@ class LastStateMatcher:
                  interpret_func: Union[Callable, IInterpretHandler],
                  custom_settings: Union[dict, Any],
                  create_event: Union[Callable, IEventsSaver],
-                 send_events):
+                 send_events,
+                 events_saver: Optional[IEventsSaver] = None,
+                 ):
         """
         LastStateMatcher matches two non-equal streams.
 
@@ -146,13 +151,13 @@ class LastStateMatcher:
             create_event:
             send_events:
         """
-        self._search_time_index = SortedKeyList(key=lambda t: recon_lw.time_stamp_key(t[0]))
+        self._search_time_index = SortedKeyList(key=lambda t: recon_lw.ts_converters.time_stamp_key(t[0]))
 
         # {key2 : { "prior_ts" : ts, "prior_obj" ; obj, SortedKeyList(timestamps)}  }
         self._state_cache = {}
 
         # sorted list of tuples(ts, key2, order, object)
-        self._state_time_index = SortedKeyList(key=lambda t: f"{recon_lw.time_stamp_key(t[0])}_{t[1]}")
+        self._state_time_index = SortedKeyList(key=lambda t: f"{recon_lw.ts_converters.time_stamp_key(t[0])}_{t[1]}")
 
         # Note, we don't use a function to define the handler functions, because
         #   the function don't provide IDE type hinting.
@@ -184,6 +189,7 @@ class LastStateMatcher:
         self._horizon_delay_seconds = horizon_delay_seconds
         self._custom_settings = custom_settings
         self._debug = False
+        self._events_saver = events_saver
 
     # def _get_handler_func(self, func, interface_cls: TypeGuard[_T]) -> _T:
     #     """That doesn't provide type hints ..."""
@@ -192,7 +198,7 @@ class LastStateMatcher:
     def _state_cache_add_item(self, ts, key2):
         if key2 not in self._state_cache:
             self._state_cache[key2] = {"prior_ts": None, "prior_o": None,
-                                       "records_times": SortedKeyList(key=recon_lw.time_stamp_key)}
+                                       "records_times": SortedKeyList(key=recon_lw.ts_converters.time_stamp_key)}
         self._state_cache[key2]["records_times"].add(ts)
 
     def _state_cache_delete_item(self, ts, key2, o):
@@ -225,12 +231,12 @@ class LastStateMatcher:
             ts2, key2, order = self._get_state_ts_key_order(o, self._custom_settings)
             if key2 is not None:
                 stream_time = ts2
-                index_key = f"{recon_lw.time_stamp_key(ts2)}_{key2}"
+                index_key = f"{recon_lw.ts_converters.time_stamp_key(ts2)}_{key2}"
                 i = self._state_time_index.bisect_key_left(index_key)
                 current_len = len(self._state_time_index)
                 next_key = None
                 if i < current_len:
-                    next_key = f"{recon_lw.time_stamp_key(self._state_time_index[i][0])}_{self._state_time_index[i][1]}"
+                    next_key = f"{recon_lw.ts_converters.time_stamp_key(self._state_time_index[i][0])}_{self._state_time_index[i][1]}"
                 if i == current_len or index_key != next_key:
                     self._state_time_index.add([ts2, key2, order, o])
                     self._state_cache_add_item(ts2, key2)
@@ -248,7 +254,8 @@ class LastStateMatcher:
         if horizon_time is not None:
             edge_timestamp = {"epochSecond": horizon_time["epochSecond"] - self._horizon_delay_seconds,
                               "nano": 0}
-            search_edge = self._search_time_index.bisect_key_left(recon_lw.time_stamp_key(edge_timestamp))
+            search_edge = self._search_time_index.bisect_key_left(
+                recon_lw.ts_converters.time_stamp_key(edge_timestamp))
         else:
             search_edge = len(self._search_time_index)
 
@@ -262,14 +269,18 @@ class LastStateMatcher:
                 o2 = None
             else:
                 records_times = self._state_cache[key1]["records_times"]
-                i = records_times.bisect_key_right(recon_lw.time_stamp_key(ts1))
+                i = records_times.bisect_key_right(
+                    recon_lw.ts_converters.time_stamp_key(ts1))
                 if i == 0:
                     o2 = self._state_cache[key1]["prior_o"]
                 else:
                     ts2 = records_times[i-1]
-                    sti = self._state_time_index.bisect_key_left(f"{recon_lw.time_stamp_key(ts2)}_{key1}")
+                    sti = self._state_time_index.bisect_key_left(
+                        f"{recon_lw.ts_converters.time_stamp_key(ts2)}_{key1}")
                     o2 = self._state_time_index[sti][3]
-            tech = {"key1": key1, "ts1": ts1, "state_cache": self._state_cache.get(key1)}
+            tech = {"key1": key1,
+                    "ts1": ts1,
+                    "state_cache": self._state_cache.get(key1)}
             # TODO 1 -- what's the idea to pass
             #   self._custom_settings, self._create_event, self._send_events
             #   if the user provides self._interpret_func and can put them there manually?
@@ -281,7 +292,7 @@ class LastStateMatcher:
         if horizon_time is not None:
             edge_timestamp = {"epochSecond": horizon_time["epochSecond"] - self._horizon_delay_seconds,
                               "nano": 0}
-            state_edge = self._state_time_index.bisect_key_left(f"{recon_lw.time_stamp_key(edge_timestamp)}_")
+            state_edge = self._state_time_index.bisect_key_left(f"{recon_lw.ts_converters.time_stamp_key(edge_timestamp)}_")
         else:
             state_edge = len(self._state_time_index)
 
@@ -292,26 +303,20 @@ class LastStateMatcher:
     def flush_all(self) -> None:
         self._flush(None)
 
-    # def execute_standalone(self, message_pickle_path, sessions_list,
-    #                        result_events_path,
-    #                        get_timestamp: Callable,
-    #                        data_objects=None,
-    #                        buffer_len = 100):
-    #     streams = recon_lw.open_scoped_events_streams(
-    #         streams_path=message_pickle_path,
-    #         name_filter=lambda n: "default_" not in n)  # change to l2 streams here
-    #     streams.add(model_impl_books)
-    #
-    #
-    #     message_buffer = [None] * buffer_len
-    #
-    #     while len(streams) > 0:
-    #         next_batch_len = recon_lw.get_next_batch(streams, message_buffer,
-    #                                                  buffer_len, get_timestamp)
-    #         buffer_to_process = message_buffer
-    #         if next_batch_len < buffer_len:
-    #             buffer_to_process = message_buffer[:next_batch_len]
-    #         self.process_objects_batch(buffer_to_process)
-    #
-    #     self.flush_all()
-    #     self._create_event.flush()
+    def execute_standalone(self,
+                           streams: Streams,
+                           get_timestamp: Callable,
+                           buffer_len=100):
+
+        message_buffer = [None] * buffer_len
+
+        while len(streams) > 0:
+            next_batch_len = streams.get_next_batch(message_buffer,
+                                                     buffer_len, get_timestamp)
+            buffer_to_process = message_buffer
+            if next_batch_len < buffer_len:
+                buffer_to_process = message_buffer[:next_batch_len]
+            self.process_objects_batch(buffer_to_process)
+
+        self.flush_all()
+        self._events_saver.flush()

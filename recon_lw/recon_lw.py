@@ -1,31 +1,20 @@
 import abc
-from datetime import datetime, timedelta
-from typing import Iterable, List, Tuple, Iterator, Optional, Dict, Any
+from datetime import datetime
+from typing import Iterable, List, Optional, Dict, Any
 
 from sortedcontainers import SortedKeyList
 from th2_data_services.data import Data
 
-from recon_lw._types import Th2Timestamp
 from recon_lw.message_utils import message_to_dict
 from os import listdir
 from os import path
 from recon_lw.EventsSaver import EventsSaver
 from th2_data_services.config import options
 
-
-def epoch_nano_str_to_ts(s_nanos: str) -> Th2Timestamp:
-    nanos = int(s_nanos)
-    return {"epochSecond": nanos // 1_000_000_000, "nano": nanos % 1_000_000_000}
-
-
-def ts_to_epoch_nano_str(ts: Th2Timestamp):
-    return f'{ts["epochSecond"]}{str(ts["nano"]).zfill(9)}'
-
-
-def time_stamp_key(ts: Th2Timestamp) -> int:
-    return 1_000_000_000 * ts["epochSecond"] + ts["nano"]
-    # nanos_str = str(ts["nano"]).zfill(9)
-    # return str(ts["epochSecond"]) + "." + nanos_str
+from recon_lw.stream import Streams
+# Don't remove gray imports -- that was done for backward compatibility.
+from recon_lw.ts_converters import time_stamp_key, epoch_nano_str_to_ts, \
+    ts_to_epoch_nano_str
 
 
 def time_index_add(key, m, time_index):
@@ -132,7 +121,8 @@ def flush_old(current_ts, horizon_delay, time_index):
     if current_ts is not None:
         edge_timestamp = {"epochSecond": current_ts["epochSecond"] - horizon_delay,
                           "nano": 0}
-        horizon_edge = time_index.bisect_key_left(time_stamp_key(edge_timestamp))
+        horizon_edge = time_index.bisect_key_left(
+            time_stamp_key(edge_timestamp))
 
     if horizon_edge > 0:
         n = 0
@@ -272,7 +262,8 @@ class RuleSettings:
 # {"first_key_func":..., "second_key_func",... "interpret_func"}
 def execute_standalone(message_pickle_path, sessions_list, result_events_path,
                        rules_settings_dict: Dict[str, Dict[str, Any]],
-                       data_objects=None):
+                       data_objects=None,
+                       buffer_len=100):
     """Entrypoint for recon-lw.
 
     It generates ReconEvents and stores them in the `result_events_path` file
@@ -331,11 +322,10 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path,
         else:
             streams = open_streams(message_pickle_path)
 
-    buffer_len = 100
     message_buffer = [None] * buffer_len
 
     while len(streams) > 0:
-        next_batch_len = get_next_batch(streams, message_buffer, buffer_len,
+        next_batch_len = streams.get_next_batch(message_buffer, buffer_len,
                                         lambda m: m["timestamp"])
         buffer_to_process = message_buffer
         if next_batch_len < buffer_len:
@@ -472,8 +462,21 @@ def open_scoped_events_streams(
         streams_path,
         name_filter=None,
         data_filter=None
-) -> SortedKeyList[Tuple[dict, Iterator, Optional[dict]]]:
-    streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
+) -> Streams:
+    """
+    Get Streams object for Th2 events.
+
+    Args:
+        streams_path:
+        name_filter:
+        data_filter:
+
+    Returns:
+        Streams: [(Th2ProtobufTimestamp,
+                  iterator for Data object,
+                  First object from Data object or None), ...]
+    """
+    streams = Streams()
     files = listdir(streams_path)
     files.sort()
     # This part to replace Data+Data to Data([Data,Data])
@@ -494,8 +497,7 @@ def open_scoped_events_streams(
     for strm in scopes_streams.values():
         if data_filter:
             strm = strm.filter(data_filter)
-        ts0 = {"epochSecond": 0, "nano": 0}
-        streams.add((ts0, iter(strm), None))
+        streams.add_stream(strm)
     return streams
 
 
@@ -504,8 +506,22 @@ def open_streams(
         name_filter=None,
         expanded_messages: bool = False,
         data_objects: List[Data] = None
-) -> SortedKeyList[Tuple[dict, Iterator, Optional[dict]]]:
-    streams = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
+) -> Streams:
+    """
+    Get Streams object for Th2 messages.
+
+    Args:
+        streams_path:
+        name_filter:
+        expanded_messages:
+        data_objects:
+
+    Returns:
+        Streams: [(Th2ProtobufTimestamp,
+                  iterator for Data object,
+                  First object from Data object or None), ...]
+    """
+    streams = Streams()
 
     if data_objects:
         for do in data_objects:
@@ -528,14 +544,15 @@ def open_streams(
                           options.MESSAGE_FIELDS_RESOLVER.expand_message(m))
             else:
                 stream = Data.from_cache_file(path.join(streams_path, f))
-            ts0 = {"epochSecond": 0, "nano": 0}
-            streams.add((ts0, iter(stream), None))
+            streams.add_stream(stream)
 
     return streams
 
 
-def get_next_batch(streams: SortedKeyList[Tuple[dict, Iterator, Optional[dict]]],
-                   batch: List[Optional[dict]], b_len, get_timestamp_func) -> int:
+def get_next_batch(streams: Streams,
+                   batch: List[Optional[dict]],
+                   batch_len,
+                   get_timestamp_func) -> int:
     """
 
     Args:
@@ -549,29 +566,16 @@ def get_next_batch(streams: SortedKeyList[Tuple[dict, Iterator, Optional[dict]]]
     Returns:
 
     """
-    batch_pos = 0
-    batch_len = b_len  # len(batch)
-    while batch_pos < batch_len and len(streams) > 0:
-        next_stream = streams.pop(0)
-        try:
-            if next_stream[2] is not None:
-                batch[batch_pos] = next_stream[2]
-                batch_pos += 1
-            o = next(next_stream[1])
-            streams.add((get_timestamp_func(o), next_stream[1], o))
-        except StopIteration as e:
-            continue
-    return batch_pos
+    # DEPRECATED.
+    return streams.get_next_batch(
+        batch=batch,
+        batch_len=batch_len,
+        get_timestamp_func=get_timestamp_func
+    )
 
 
-def sync_stream(streams: SortedKeyList[Tuple[dict, Iterator, Optional[dict]]],
+def sync_stream(streams: Streams,
                 get_timestamp_func):
-    while len(streams) > 0:
-        next_stream = streams.pop(0)
-        try:
-            if next_stream[2] is not None:
-                yield next_stream[2]
-            o = next(next_stream[1])
-            streams.add((get_timestamp_func(o), next_stream[1], o))
-        except StopIteration as e:
-            continue
+    # DEPRECATED.
+    yield streams.sync_stream(get_timestamp_func)
+
