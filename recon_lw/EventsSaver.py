@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from recon_lw import recon_lw
 from datetime import datetime, timedelta
@@ -72,7 +73,7 @@ class EventsSaver(IEventsSaver):
                 self.flush_scope(scope)
 
     def create_event(self, name, type, ok=True, body=None, parentId=None,
-                     attached_messages=None, ts=None):
+                     attached_messages=None, ts=None) -> dict[str, Any]:
         attached_messages = attached_messages or []
         if ts is None:
             ts = datetime.now()
