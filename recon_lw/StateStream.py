@@ -34,14 +34,19 @@ class StateStream:
         self._combine_instantenious_snapshots = combine_instantenious_snapshots
         self._events_saver = events_saver
 
-    def state_updates(self, stream):
+    def state_updates(self, stream: Iterator):
         for o in stream:
             key, ts, action, state = self._get_next_update_func(o)
             if key is not None:
                 yield (key, ts, action, state)
 
-    def snapshots(self, stream) -> Iterator[dict[str, Any]]:
-        """It is expected sorted stream.
+    def snapshots(self, stream: Iterator) -> Iterator[dict[str, Any]]:
+        """It is expected Sorted stream!
+        Otherwise, it will generate error events, such like ObjectDontExist
+        because we, e.g. can have the following sequence
+            -> delete
+            -> new
+        That is not correct.
 
         Returns and at the same time stores events to disc.
         Events format -- look at `create_snapshot_event`.
