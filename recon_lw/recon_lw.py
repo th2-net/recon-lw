@@ -32,6 +32,7 @@ def message_cache_pop(m_id, message_cache):
 
 
 def pair_one_match(next_batch, rule_dict):
+    # first_key_func takes m  returns string(key)
     match_index = rule_dict["match_index"]
     time_index = rule_dict["time_index"]
     message_cache = rule_dict["message_cache"]
@@ -67,8 +68,18 @@ def pair_one_match(next_batch, rule_dict):
                     message_cache_add(m, message_cache)
 
 
-# first_key_func takes m  returns string(key)
 def one_many_match(next_batch, rule_dict):
+    """
+    It's expected that `first_key_func` will return [ke1, key2, ...] for
+    this type of matching
+
+    Args:
+        next_batch:
+        rule_dict:
+
+    Returns:
+
+    """
     match_index = rule_dict["match_index"]
     time_index = rule_dict["time_index"]
     message_cache = rule_dict["message_cache"]
@@ -577,5 +588,5 @@ def get_next_batch(streams: Streams,
 def sync_stream(streams: Streams,
                 get_timestamp_func):
     # DEPRECATED.
-    yield streams.sync_stream(get_timestamp_func)
+    yield from streams.sync_stream(get_timestamp_func)
 
