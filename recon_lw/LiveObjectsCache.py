@@ -1,6 +1,7 @@
 from sortedcontainers import SortedKeyList
 
-import recon_lw.ts_converters
+from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
+
 from recon_lw import recon_lw
 from datetime import datetime
 
@@ -12,7 +13,7 @@ class LiveObjectsCache:
         self._update_object = update_object
         self._new_object = new_object
         self._is_alive = is_alive
-        self._time_index = SortedKeyList(key=lambda t: recon_lw.ts_converters.time_stamp_key(t[0]))
+        self._time_index = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
         self._objects_index = {}
 
     def process_objects_batch(self, batch):
@@ -40,7 +41,7 @@ class LiveObjectsCache:
             edge_timestamp = {"epochSecond": last_ts["epochSecond"] - self._horizon_delay_seconds,
                               "nano": 0}
             horizon_edge = self._time_index.bisect_key_left(
-                recon_lw.ts_converters.time_stamp_key(edge_timestamp))
+                time_stamp_key(edge_timestamp))
             if horizon_edge > 0:
                 for n in range(horizon_edge):
                     nxt = self._time_index.pop(0)
