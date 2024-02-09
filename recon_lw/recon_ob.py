@@ -6,7 +6,7 @@ from sortedcontainers import SortedKeyList
 from th2_data_services.data import Data
 from th2_data_services.utils.message_utils import message_utils
 
-import recon_lw.ts_converters
+from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
 from recon_lw import recon_lw
 from th2_data_services.utils import time as time_utils
 
@@ -348,7 +348,7 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
                                check_book_rule, event_sequence, parent_event, initial_book_params,
                                log_books_filter, log_books_collection, aggregate_batch_updates)
 
-    log_books_collection.sort(key=lambda d: recon_lw.ts_converters.time_stamp_key(d["timestamp"]))
+    log_books_collection.sort(key=lambda d: time_stamp_key(d["timestamp"]))
     for log_book in log_books_collection:
         log_event = recon_lw.create_event("OrderBook:" + log_book["sessionId"],
                                           "OrderBook",

@@ -2,7 +2,8 @@ import pathlib
 from datetime import datetime
 from typing import List
 
-import recon_lw.ts_converters
+from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
+
 from recon_lw import recon_lw
 from recon_lw.EventsSaver import EventsSaver
 from recon_lw.LastStateMatcher import LastStateMatcher
@@ -18,7 +19,7 @@ def ob_compare_stats_get_state_ts_key_order(o, settings):
     if o["body"]["sessionId"] != settings["top_session"]:
         return None, None, None
 
-    return recon_lw.ts_converters.epoch_nano_str_to_ts(o["body"]["time_of_event"]), o["body"]["book_id"], \
+    return epoch_nano_str_to_ts(o["body"]["time_of_event"]), o["body"]["book_id"], \
            o["body"]["v"]
 
 
@@ -133,7 +134,7 @@ def get_search_stats_ts_key(m, settings):
         return None, None
 
     mm = message_to_dict(m)
-    return recon_lw.ts_converters.epoch_nano_str_to_ts(mm["TimeOfEvent"]), mm["TradableInstrumentID"]
+    return epoch_nano_str_to_ts(mm["TimeOfEvent"]), mm["TradableInstrumentID"]
     # epoch_nano_str_to_ts is in recon_ob_stats module
 
 

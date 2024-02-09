@@ -1,14 +1,13 @@
 from sortedcontainers import SortedKeyList
 
-import recon_lw.ts_converters
-from recon_lw import recon_lw
+from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
 
 
 class TimeCacheMatcher:
     def __init__(self, horizon_delay_seconds, get_timestamp_key1_key2, interpret_func, custom_settings, create_event,
                  send_events):
         self._match_index = {}
-        self._time_index = SortedKeyList(key=lambda t: recon_lw.ts_converters.time_stamp_key(t[0]))
+        self._time_index = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
         self._time_index2 = {}
         self._get_timestamp_key1_key2 = get_timestamp_key1_key2
         self._interpret_func = interpret_func

@@ -3,7 +3,8 @@ from typing import Optional, List, Tuple, Callable
 
 from th2_data_services.data import Data
 
-import recon_lw.ts_converters
+from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
+
 from recon_lw import recon_lw
 from recon_lw.EventsSaver import EventsSaver
 from recon_lw import recon_ob_cross_stream
@@ -142,7 +143,7 @@ def oe_ob_get_timestamp_key1_key2(o: dict, custom_settings: dict) -> \
     if o["eventType"] == "OrderBook":
         book_id = clear_bookid(o['body']['book_id'])
         str_toe = o["body"]["operation_params"]["str_time_of_event"]
-        ts = recon_lw.ts_converters.epoch_nano_str_to_ts(str_toe)
+        ts = epoch_nano_str_to_ts(str_toe)
         if not is_book_open(str(book_id), ts):
             return None, None, None
         if o["body"]["operation_params"].get('order_id'):
@@ -155,7 +156,7 @@ def oe_ob_get_timestamp_key1_key2(o: dict, custom_settings: dict) -> \
             return None, None, None
     elif o["eventType"] == "OEMDImage":
         str_toe = o["body"]["operation_params"]["str_time_of_event"]
-        ts = recon_lw.ts_converters.epoch_nano_str_to_ts(str_toe)
+        ts = epoch_nano_str_to_ts(str_toe)
         if not is_book_open(o["body"]["operation_params"]["instr"], ts):
             return None, None, None
         return ts, None, f'{str_toe}.{o["body"]["operation_params"]["order_id"]}.{o["body"]["otv"]}'
@@ -254,7 +255,7 @@ def oe_er_key_ts_new_key_extract(er):
     else:  # need to update tags
         if mm["ExecType"] in ["8"]:
             return None, None, None
-        ts = recon_lw.ts_converters.epoch_nano_str_to_ts(mm["TransactTime"])
+        ts = epoch_nano_str_to_ts(mm["TransactTime"])
         if mm["ExecType"] in ["4", "5"]:
             key = mm["OriginalClientOrderID"]
             new_key = mm["ClientOrderID"]
@@ -301,7 +302,7 @@ def get_transact_time(er):
     if recon_lw.protocol(er) == "FIX":
         return ts_from_tag_val(mm["TransactTime"])
     else:
-        return recon_lw.ts_converters.epoch_nano_str_to_ts(mm["TransactTime"])
+        return epoch_nano_str_to_ts(mm["TransactTime"])
 
 
 def get_order_status(er: dict) -> int:
@@ -334,14 +335,14 @@ def report_add_order(er: dict, v: int, create_event: Callable):
                                  "price": get_resting_price(er),
                                  "size": get_resting_qty(er),
                                  "side": get_side(er),
-                                 "str_time_of_event": recon_lw.ts_converters.ts_to_epoch_nano_str(
+                                 "str_time_of_event": ts_to_epoch_nano_str(
                                      get_transact_time(er))},
             "otv": v}
     return create_event("OEMDImage", "OEMDImage", True, body)
 
 
 def report_delete_order(er: dict, v: int, create_event, str_time_of_event=None):
-    tov = recon_lw.ts_converters.ts_to_epoch_nano_str(
+    tov = ts_to_epoch_nano_str(
         get_transact_time(er)) if str_time_of_event is None else str_time_of_event
     body = {"operation": "ob_delete_order",
             "operation_params": {"instr": get_instrument_id(er),
@@ -357,7 +358,7 @@ def report_update_order(er: dict, v: int, create_event: Callable):
                                  "order_id": get_order_id(er),
                                  "price": get_resting_price(er),
                                  "size": get_resting_qty(er),
-                                 "str_time_of_event": recon_lw.ts_converters.ts_to_epoch_nano_str(
+                                 "str_time_of_event": ts_to_epoch_nano_str(
                                      get_transact_time(er))},
             "otv": v}
     return create_event("OEMDImage", "OEMDImage", True, body)
@@ -369,7 +370,7 @@ def report_trade_order(er: dict, v: int, create_event: Callable):
                                  "order_id": get_order_id(er),
                                  "traded_price": get_trade_price(er),
                                  "traded_size": get_trade_qty(er),
-                                 "str_time_of_event": recon_lw.ts_converters.ts_to_epoch_nano_str(
+                                 "str_time_of_event": ts_to_epoch_nano_str(
                                      get_transact_time(er))},
             "otv": v}
     return create_event("OEMDImage", "OEMDImage", True, body)
@@ -408,7 +409,7 @@ def oe_report_md_images(update_states, create_event, send_events):
             elif get_resting_price(prev_er) != get_resting_price(er) or get_resting_qty(
                     prev_er) < get_resting_qty(er):
                 ev1 = report_delete_order(prev_er, 0, create_event,
-                                          str_time_of_event=recon_lw.ts_converters.ts_to_epoch_nano_str(
+                                          str_time_of_event=ts_to_epoch_nano_str(
                                               get_transact_time(er)))
                 ev1["attachedMessageIds"] = [er["messageId"]]
                 ev1["scope"] = er["sessionId"]
@@ -444,7 +445,7 @@ def oe_report_md_images(update_states, create_event, send_events):
             prev_er = prev_state["last_er"]
             last_er = update_states[-1][0]
             ev1 = report_delete_order(prev_er, 0, create_event,
-                                      str_time_of_event=recon_lw.ts_converters.ts_to_epoch_nano_str(
+                                      str_time_of_event=ts_to_epoch_nano_str(
                                           get_transact_time(last_er)))
             ev1["attachedMessageIds"] = [upd[0]["messageId"] for upd in update_states]
             ev1["scope"] = prev_er["sessionId"]
