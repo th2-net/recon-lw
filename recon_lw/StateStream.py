@@ -1,4 +1,5 @@
-from typing import Callable, Any, Tuple, Iterator
+from __future__ import annotations
+from typing import Callable, Any, Tuple, Iterator, Iterable
 
 from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
 from recon_lw import recon_lw
@@ -34,13 +35,13 @@ class StateStream:
         self._combine_instantenious_snapshots = combine_instantenious_snapshots
         self._events_saver = events_saver
 
-    def state_updates(self, stream: Iterator):
+    def state_updates(self, stream: Iterable):
         for o in stream:
             key, ts, action, state = self._get_next_update_func(o)
             if key is not None:
                 yield (key, ts, action, state)
 
-    def snapshots(self, stream: Iterator) -> Iterator[dict[str, Any]]:
+    def snapshots(self, stream: Iterable) -> Iterator[dict[str, Any]]:
         """It is expected Sorted stream!
         Otherwise, it will generate error events, such like ObjectDontExist
         because we, e.g. can have the following sequence
