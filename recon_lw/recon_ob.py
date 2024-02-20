@@ -386,14 +386,16 @@ def init_ob_stream(rule_settings: dict) -> None:
         snapshots_stream = rule_settings["initial_snapshot_stream"]
         expanded_stream = (mm for m in snapshots_stream for mm in options.mfr.expand_message(m))
         expanded_stream_iter = iter(expanded_stream)
-        books, start_seq_id = read_snapshot(expanded_stream_iter,
-                                            rule_settings["snapshot_stop_func"],
-                                            rule_settings["get_book_id"],
-                                            rule_settings["update_book_rule"],
-                                            rule_settings["check_book_rule"],
-                                            rule_settings["rule_root_event"],
-                                            rule_settings["initial_book_params"],
-                                            rule_settings["events_saver"])
+        rule_settings = RuleSettings(rule_settings["snapshot_stop_func"], rule_settings["get_book_id"], 
+                                     rule_settings["update_book_rule"], rule_settings["check_book_rule"],
+                                     rule_settings["events_saver"], rule_settings["rule_root_event"], 
+                                     rule_settings["initial_book_params"], 
+                                     rule_settings["event_sequence"])
+        
+        rule_settings.set('log_books_filter', rule_settings["log_books_filter"] if "log_books_filter" in rule_settings else None)
+        rule_settings.set('aggregate_batch_updates', rule_settings["aggregate_batch_updates"] if "aggregate_batch_updates" in rule_settings else False)
+        
+        books, start_seq_id = read_snapshot(expanded_stream_iter,rule_settings)        
         if books is not None:
             rule_settings["books_cache"] = {}
             rule_settings["start_seq_id"] = start_seq_id
