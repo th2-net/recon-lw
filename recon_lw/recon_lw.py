@@ -314,6 +314,7 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path,
                                                         event_sequence,
                                                         parentId=root_event["eventId"])
         rule_settings["events_saver"] = events_saver
+        rule_settings["event_sequence"] = event_sequence
         if "init_func" not in rule_settings:
             rule_settings["init_func"] = init_matcher
         if "collect_func" not in rule_settings:
