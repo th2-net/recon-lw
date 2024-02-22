@@ -237,7 +237,7 @@ def read_snapshot(expanded_snapshots_stream_iter, rule_settings, saveEvents=True
         for log_book in log_books_collection:
             if log_book['book_id'] not in log_books:
                 log_books[log_book['book_id']] = log_book
-            if log_book['v'] > log_books[log_book['book_id']]['v']:
+            if log_book['v'] >= log_books[log_book['book_id']]['v']:
                 log_books[log_book['book_id']] = log_book
         filtered_log_books_collection = list(log_books.values())
         filtered_log_books_collection. sort(key=lambda d: recon_lw.time_stamp_key(d['timestamp']))
