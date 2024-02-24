@@ -123,6 +123,15 @@ class StateStream:
                     snapshot.pop(key)
                     updated_snapshots.add(snap_id)
                     last_ts = ts
+            elif action == 'cu':
+                snapshot[key] = state
+                updated_snapshots.add(snap_id)
+                last_ts = ts
+            elif action == 'dd':
+                if key in snapshot:
+                    snapshot.pop(key)
+                    updated_snapshots.add(snap_id)
+                    last_ts = ts
         for k in updated_snapshots:
             yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
         updated_snapshots.clear()
