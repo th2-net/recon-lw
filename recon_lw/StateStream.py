@@ -124,6 +124,7 @@ class StateStream:
                     updated_snapshots.add(snap_id)
                     last_ts = ts
             elif action == 'cu':
+                state = self._state_transition_func(state, snapshot.get(key))
                 snapshot[key] = state
                 updated_snapshots.add(snap_id)
                 last_ts = ts
