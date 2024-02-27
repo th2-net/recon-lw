@@ -17,7 +17,8 @@ class StateStream:
                  get_snapshot_id_func,
                  state_transition_func,
                  events_saver: IEventsSaver,
-                 combine_instantenious_snapshots=True
+                 combine_instantenious_snapshots=True,
+                 get_next_pdate_func2 = None
                  ) -> None:
         """
 
@@ -34,12 +35,22 @@ class StateStream:
         self._state_transition_func = state_transition_func
         self._combine_instantenious_snapshots = combine_instantenious_snapshots
         self._events_saver = events_saver
+        self.__get_next_update_func2 = get_next_update_func2
 
-    def state_updates(self, stream: Iterable):
-        for o in stream:
-            key, ts, action, state = self._get_next_update_func(o)
-            if key is not None:
-                yield (key, ts, action, state)
+    def state_updates(self, stream: Iterable, snapshots_collection):
+        if self._get_next_update_func is None:
+            for o in stream:
+                key, ts, action, state = self._get_next_update_func(o)
+                if key is not None:
+                    yield (key, ts, action, state)
+        else:
+            for o in stream:
+                updates = self._get_next_update_func2(o, snapshots_collection)
+                #key, ts, action, state
+                for key, ts, action, state in updates:
+                    if key is not None:
+                        yield (key, ts, action, state)
+            
 
     def snapshots(self, stream: Iterable) -> Iterator[dict[str, Any]]:
         """It is expected Sorted stream!
@@ -68,7 +79,7 @@ class StateStream:
         snapshots_collection = {}
         updated_snapshots = set()
         last_ts = None
-        for tpl in self.state_updates(stream):
+        for tpl in self.state_updates(stream, snapshots_collection):
             key = tpl[0]
             ts = tpl[1]
             action = tpl[2]  # Todo -- it's better to use Enum for this.
