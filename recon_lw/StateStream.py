@@ -18,7 +18,7 @@ class StateStream:
                  state_transition_func,
                  events_saver: IEventsSaver,
                  combine_instantenious_snapshots=True,
-                 get_next_pdate_func2 = None
+                 get_next_update_func2 = None
                  ) -> None:
         """
 
