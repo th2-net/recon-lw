@@ -38,7 +38,7 @@ class StateStream:
         self._get_next_update_func2 = get_next_update_func2
 
     def state_updates(self, stream: Iterable, snapshots_collection):
-        if self._get_next_update_func is None:
+        if self._get_next_update_func2 is None:
             for o in stream:
                 key, ts, action, state = self._get_next_update_func(o)
                 if key is not None:
