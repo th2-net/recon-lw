@@ -35,7 +35,7 @@ class StateStream:
         self._state_transition_func = state_transition_func
         self._combine_instantenious_snapshots = combine_instantenious_snapshots
         self._events_saver = events_saver
-        self.__get_next_update_func2 = get_next_update_func2
+        self._get_next_update_func2 = get_next_update_func2
 
     def state_updates(self, stream: Iterable, snapshots_collection):
         if self._get_next_update_func is None:
