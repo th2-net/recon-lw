@@ -32,7 +32,7 @@ def combine_operations(operations_list):
 
 def process_operations_batch(operations_batch, events, book_id, book, check_book_rule,
                              event_sequence, parent_event, log_books_filter, log_books_collection,
-                             aggregate_batch_updates):
+                             aggregate_batch_updates, meta_extract=None):
     obs = []
     # debug_event = recon_lw.create_event("ROBDebug:" + parent_event["eventName"], "ROBDebug",
     #                                    event_sequence,
@@ -81,6 +81,8 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
                 log_book["operation"] = operation.__name__
                 log_book["operation_params"] = initial_parameters
                 log_book["source_msg_id"] = mess["messageId"]
+                if meta_extract is not None:
+                    log_book["source_msg_id"] = meta_extract(mess)
                 if log_books_filter is None or log_books_filter(log_book):
                     log_books_collection.append(log_book)
                     obs.append(log_book)
@@ -284,7 +286,7 @@ def read_all_snapshots(snapshots_stream: Data, snapshot_stop_func: Callable,
 def process_market_data_update(mess_batch, events, books_cache, get_book_id_func, update_book_rule,
                                check_book_rule, event_sequence, parent_event, initial_book_params,
                                log_books_filter,
-                               log_books_collection, aggregate_batch_updates):
+                               log_books_collection, aggregate_batch_updates,meta_extract=None):
     books_updates = {}
     for m in mess_batch:
         book_ids_list, result = get_book_id_func(m)
@@ -319,14 +321,14 @@ def process_market_data_update(mess_batch, events, books_cache, get_book_id_func
             process_operations_batch(chunk, events, book_id, book, check_book_rule,
                                      event_sequence, parent_event, log_books_filter,
                                      log_books_collection,
-                                     aggregate_batch_updates)
+                                     aggregate_batch_updates, meta_extract)
 
 
 def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book_id_func,
                      update_book_rule,
                      check_book_rule, event_sequence: dict, send_events_func, parent_event: dict,
                      initial_book_params: dict,
-                     log_books_filter, aggregate_batch_updates, start_seq=-1) -> int:
+                     log_books_filter, aggregate_batch_updates, start_seq=-1, meta_extract=None) -> int:
     events = []
     n_processed = 0
     messages_chunk = []
@@ -356,7 +358,7 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
     process_market_data_update(messages_chunk, events, books_cache, get_book_id_func,
                                update_book_rule,
                                check_book_rule, event_sequence, parent_event, initial_book_params,
-                               log_books_filter, log_books_collection, aggregate_batch_updates)
+                               log_books_filter, log_books_collection, aggregate_batch_updates,meta_extract)
 
     log_books_collection.sort(key=lambda d: time_stamp_key(d["timestamp"]))
     for log_book in log_books_collection:
@@ -438,7 +440,8 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
                                        "log_books_filter"] if "log_books_filter" in rule_settings else None,
                                    rule_settings[
                                        "aggregate_batch_updates"] if "aggregate_batch_updates" in rule_settings else False,
-                                   rule_settings["start_seq_id"])
+                                   rule_settings["start_seq_id"],
+                                   meta_extract=rule_settings.get('meta_extract'))
 
     ## Gaps
     gaps = rule_settings["sequence_cache"].get_next_gaps()
