@@ -82,7 +82,7 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
                 log_book["operation_params"] = initial_parameters
                 log_book["source_msg_id"] = mess["messageId"]
                 if meta_extract is not None:
-                    log_book["source_msg_id"] = meta_extract(mess)
+                    log_book["meta"] = meta_extract(mess)
                 if log_books_filter is None or log_books_filter(log_book):
                     log_books_collection.append(log_book)
                     obs.append(log_book)
