@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Callable, Any, Tuple, Iterator, Iterable
+
+from collections import defaultdict
+from typing import Callable, Any, Tuple, Iterator, Iterable, Dict
 
 from recon_lw.ts_converters import epoch_nano_str_to_ts, ts_to_epoch_nano_str, time_stamp_key
 from recon_lw import recon_lw
@@ -59,8 +61,11 @@ class StateStream:
             -> delete
             -> new
         That is not correct.
+        StateStream will generate ObjectDontExist and it's state will `new`.
 
-        Returns and at the same time stores events to disc.
+        Returns
+            Snapshot events
+            and at the same time stores events to disc (for Errors only)
         Events format -- look at `create_snapshot_event`.
         """
 
@@ -281,7 +286,7 @@ def create_oe_snapshots_streams(oe_streams, result_events_path, buffer_len=100):
     events_saver = EventsSaver(result_events_path)
     filtered_streams = [stream.filter(order_updates_filter) for stream in oe_streams]
     strm_list = recon_lw.open_streams(None, None, False, filtered_streams)
-    m_stream = strm_list.sync_stream(order_updates_ts)
+    m_stream = strm_list.sync_streams(order_updates_ts)
     state_stream = StateStream(get_next_update_oe,
                                get_snapshot_id_oe,
                                state_transition_oe,
