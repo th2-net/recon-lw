@@ -48,14 +48,7 @@ class ISearchTsKeyHandler(ABC):
         The method should return message-timestamp and the matching key for the stream-1.
 
         For the first stream (left).
-
-        `1 stream` is a stream of sequential state changes. It is a
-        deterministic set of events that shows every change.
-        For example:
-            [1] OrderBook.
-            Each record in such a stream is a complete description of the state
-            of the order book at a certain point in time.
-            This stream has no gaps. We know all the states of the OrderBook.
+        Read about stream 1 in LastStateMatcher.
 
         Args:
             o:
@@ -78,15 +71,7 @@ class IStateTsKeyOrderHandler(ABC):
         stream-2 and .
 
         For the second stream (right)
-
-        `2nd stream` is the same thing, but received at a random point in time.
-        For example:
-            [1] MarketData snapshots.
-            This is an OrderBook state stream aggregated over time. For example
-            every 10 seconds. This stream does not contain all the states of the
-            book. It only displays the status at the time the message was
-            published.
-            [2] Some API request that returns some current state.
+        Read about stream 2 in LastStateMatcher.
 
         Args:
             o:
@@ -111,9 +96,9 @@ class LastStateMatcher:
         """
         LastStateMatcher matches two non-equal streams.
 
-        For each state (record) from aggregated `stream 2` (the stream contains
+        For each state (record) from aggregated `stream 1` (the stream contains
         only some system states) LastStateMatcher looking for a state (record)
-        in `stream 1` (the stream contains all states of the system) by
+        in `stream 2` (the stream contains all states of the system) by
         keys returned by `get_search_ts_key` and `get_state_ts_key_order`.
 
         Matched messages are compared in `interpret_func`.
@@ -123,15 +108,7 @@ class LastStateMatcher:
 
         LastStateMatcher assumes that there are 2 unequal streams.
 
-        `1 stream` is a stream of sequential state changes. It is a
-        deterministic set of events that shows every change.
-        For example:
-            [1] OrderBook.
-            Each record in such a stream is a complete description of the state
-            of the order book at a certain point in time.
-            This stream has no gaps. We know all the states of the OrderBook.
-
-        `2nd stream` is the same thing, but received at a random point in time.
+        `1st stream` is the same thing, but received at a random point in time.
         For example:
             [1] MarketData snapshots.
             This is an OrderBook state stream aggregated over time. For example
@@ -140,6 +117,13 @@ class LastStateMatcher:
             published.
             [2] Some API request that returns some current state.
 
+        `2nd stream` is a stream of sequential state changes. It is a
+        deterministic set of events that shows every change.
+        For example:
+            [1] OrderBook.
+            Each record in such a stream is a complete description of the state
+            of the order book at a certain point in time.
+            This stream has no gaps. We know all the states of the OrderBook.
 
         Args:
             horizon_delay_seconds:
@@ -152,13 +136,19 @@ class LastStateMatcher:
             create_event:
             send_events:
         """
-        self._search_time_index = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
+        self._search_time_index = Streams()  # stream1
 
-        # {key2 : { "prior_ts" : ts, "prior_obj" ; obj, SortedKeyList(timestamps)}  }
+        # _state_cache: {key2 : {
+        #                       "prior_ts" : ts,
+        #                       "prior_obj" ; obj, SortedKeyList(timestamps)}  }
         self._state_cache = {}
 
         # sorted list of tuples(ts, key2, order, object)
-        self._state_time_index = SortedKeyList(key=lambda t: f"{time_stamp_key(t[0])}_{t[1]}")
+        self._state_time_index: SortedKeyList[
+            # ke2_Th2Timestamp, key2_matching_key, stream2_order, o
+            Tuple[Th2Timestamp, Any, Optional[dict], dict]
+        ] = SortedKeyList(
+            key=lambda t: f"{time_stamp_key(t[0])}_{t[1]}")  # stream2
 
         # Note, we don't use a function to define the handler functions, because
         #   the function don't provide IDE type hinting.
@@ -196,7 +186,7 @@ class LastStateMatcher:
     #     """That doesn't provide type hints ..."""
     #     return func.handler if isinstance(func, interface_cls) else func
 
-    def _state_cache_add_item(self, ts, key2):
+    def _state_cache_add_item(self, ts: Th2Timestamp, key2):
         if key2 not in self._state_cache:
             self._state_cache[key2] = {"prior_ts": None, "prior_o": None,
                                        "records_times": SortedKeyList(key=time_stamp_key)}
@@ -214,7 +204,7 @@ class LastStateMatcher:
         """
 
         Args:
-            batch: list with objects from stream-1 (full stream) or stream-2
+            batch: list with objects from stream-2 (full stream) or stream-1
             (agg stream).
             There is no separation between streams. Both streams combined to 1
             stream. TODO -- Why?
@@ -223,13 +213,14 @@ class LastStateMatcher:
 
         """
         stream_time = None
+        # o -- object from provided streams.
         for o in batch:
             ts1, key1 = self._get_search_ts_key(o, self._custom_settings)
             if key1 is not None:
                 stream_time = ts1
                 self._search_time_index.add((ts1, key1, o))
                 continue
-            ts2, key2, order = self._get_state_ts_key_order(o, self._custom_settings)
+            ts2, key2, stream2_order = self._get_state_ts_key_order(o, self._custom_settings)
             if key2 is not None:
                 stream_time = ts2
                 index_key = f"{time_stamp_key(ts2)}_{key2}"
@@ -239,12 +230,12 @@ class LastStateMatcher:
                 if i < current_len:
                     next_key = f"{time_stamp_key(self._state_time_index[i][0])}_{self._state_time_index[i][1]}"
                 if i == current_len or index_key != next_key:
-                    self._state_time_index.add([ts2, key2, order, o])
+                    self._state_time_index.add([ts2, key2, stream2_order, o])
                     self._state_cache_add_item(ts2, key2)
                 else:
                     rec = self._state_time_index[i]
-                    if order >= rec[2]:
-                        rec[2] = order
+                    if stream2_order >= rec[2]:
+                        rec[2] = stream2_order
                         rec[3] = o
 
         #flush
