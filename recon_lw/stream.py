@@ -1,5 +1,5 @@
 from typing import Tuple, Iterator, Optional, TypeVar, Dict, List, Callable, \
-    Iterable
+    Iterable, Any
 
 from sortedcontainers import SortedKeyList
 
@@ -11,7 +11,11 @@ StreamsVal = Tuple[Th2Timestamp, Iterator, Optional[dict]]
 
 class Streams(SortedKeyList):
     """
-    Streams -- wrapper for SortedKeyList that provides type hints.
+    Streams -- wrapper for SortedKeyList that provides type hints and
+    methods to work with streams.
+
+    Note:
+        Default sort function sorts by Seconds precision.
 
     streams: [(Th2ProtobufTimestamp,
                     iterator for Data object,
@@ -38,8 +42,19 @@ class Streams(SortedKeyList):
     def pop(self, index=-1) -> StreamsVal:
         return super().pop(index)
 
-    def sync_stream(self, get_timestamp_func):
-        """Yields synced by `get_timestamp_func` values from the streams."""
+    def sync_streams(self, get_timestamp_func: Callable):
+        """Yields synced by `get_timestamp_func` values from the streams.
+
+        Almost the same as `get_next_batch` but yields all values from all
+        streams. `get_next_batch` will return only the messages in the list.
+
+        Args:
+            get_timestamp_func: the function should take an element of any
+                stream from streams inside this Streams object.
+                It means that the function should be able to understand what
+                element was passed (from which stream) and should return
+                timestamp from it.
+        """
         while len(self) > 0:
             ts, next_stream_iterator, first_val_in_iterator = self.pop(0)
             try:
@@ -77,6 +92,7 @@ class Streams(SortedKeyList):
                 o = next(iterator)
                 self.add((get_timestamp_func(o), iterator, o))
             except StopIteration as e:
+                # When iterator is empty.
                 continue
 
         return batch_pos

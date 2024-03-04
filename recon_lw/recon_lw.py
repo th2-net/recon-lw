@@ -70,8 +70,15 @@ def pair_one_match(next_batch, rule_dict):
 
 def one_many_match(next_batch, rule_dict):
     """
+    One to Many matching algorithm.
+
     It's expected that `first_key_func` will return [ke1, key2, ...] for
     this type of matching
+
+    If first_key_func will return the same value for keys -- they will be
+    removed as duplicates.
+    Second key func -- messages with the same key will be added to result and
+    provided to interpr func as [_, 2nd_key_match1,  2nd_key_match2, ...]
 
     Args:
         next_batch:
@@ -80,7 +87,8 @@ def one_many_match(next_batch, rule_dict):
     Returns:
 
     """
-    match_index = rule_dict["match_index"]
+    # match_index: dict[Any, MatchIndexElement] = rule_dict["match_index"]
+    match_index: dict[Any, list] = rule_dict["match_index"]
     time_index = rule_dict["time_index"]
     message_cache = rule_dict["message_cache"]
     first_key_func = rule_dict["first_key_func"]
@@ -114,7 +122,7 @@ def one_many_match(next_batch, rule_dict):
                 message_cache_add(m, message_cache)
             else:
                 existing = match_index[second_key]
-                if existing[1] is None:
+                if existing[1] is None:  # existing[1] - stream 2 message ID
                     existing[1] = message_id
                     # match_index[second_key] = [existing[0], message_id]
                     message_cache_add(m, message_cache)
@@ -240,6 +248,7 @@ class RuleSettings:
 
     @abc.abstractmethod
     def first_key_func(self, message):
+        """Should return list of objects for 1 to many match mode."""
         pass
 
     @abc.abstractmethod
@@ -275,7 +284,10 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path,
                        rules_settings_dict: Dict[str, Dict[str, Any]],
                        data_objects=None,
                        buffer_len=100):
-    """Entrypoint for recon-lw.
+    """Entrypoint for Horizon Recon.
+
+    Horizon Recon will store all messages withing time window == 'horizon_delay'.
+
 
     It generates ReconEvents and stores them in the `result_events_path` file
     to disc in pickle format.
@@ -289,6 +301,21 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path,
 
     If you provide data_objects, message_pickle_path -- will be ignored.
 
+    rules_settings_dict:
+        first_key_func(self, message):
+            Should return list of objects for 1 to many match mode.
+
+    Note:
+        1. All messages should have `timestamp` field.
+        2. Messages from Streams will be handled one by one sorted by
+            timestamp.
+        3. Stream object inside Streams should be sorted.
+        4. DON'T PASS UNITED DATA OBJECT AS `data_objects`
+            e.g. you have 3 streams (3 Data objects) and you want to filter out
+            each of them. (e.g. remove all Heartbeats)
+            Don't need to do `stream = Data([d1, d2, d3]).filter(...)
+            That will work wrong!
+            **Horizon recon expects a set of sorted by Timestamp streams.**
 
     Args:
         message_pickle_path:
@@ -589,5 +616,6 @@ def get_next_batch(streams: Streams,
 def sync_stream(streams: Streams,
                 get_timestamp_func):
     # DEPRECATED.
-    yield from streams.sync_stream(get_timestamp_func)
+    #   Use streams.sync_streams instead.
+    yield from streams.sync_streams(get_timestamp_func)
 
