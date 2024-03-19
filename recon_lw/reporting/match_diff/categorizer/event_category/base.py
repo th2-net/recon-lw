@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 
-@dataclass
+@dataclass(frozen=True)
 class EventCategory:
     name: str
 

@@ -83,7 +83,7 @@ class ErrorExampleDisplayer:
             code_mc = f'<code id="code">{json.dumps(example_data.message_content, indent=4)}</code>'
 
         return f'''
-        <td style="text-align: left, vertical-align: top">
+        <td style="text-align: left; vertical-align: top">
           <div class="wrap-collabsible">
             <input id="{item_id}" class="toggle" type="checkbox">
             <label for="{item_id}" class="lbl-toggle">{example_data.message_id}</label>
