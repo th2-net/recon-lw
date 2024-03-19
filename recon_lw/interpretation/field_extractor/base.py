@@ -13,7 +13,7 @@ class Extractor(ABC):
         self.field_name = field_name
 
     def __call__(self, message: Message, adapter: Adapter) -> Optional[Any]:
-        pass
+        return self.extract(message, adapter)
 
     def extract(self, message: Message, adapter: Adapter) -> Optional[Any]:
         pass
