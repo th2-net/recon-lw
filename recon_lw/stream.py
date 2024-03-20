@@ -42,7 +42,7 @@ class Streams(SortedKeyList):
     def pop(self, index=-1) -> StreamsVal:
         return super().pop(index)
 
-    def sync_streams(self, get_timestamp_func: Callable = time_stamp_key):
+    def sync_streams(self, get_timestamp_func: Callable):
         """Yields synced by `get_timestamp_func` values from the streams.
 
         Almost the same as `get_next_batch` but yields all values from all
@@ -54,8 +54,21 @@ class Streams(SortedKeyList):
                 It means that the function should be able to understand what
                 element was passed (from which stream) and should return
                 timestamp from it.
+                If you use the `default_sort_key_func` for your `Streams` object,
+                it means that your `get_timestamp_func` should return `Th2Timestamp`.
+                Example:
+                    your msg: {ts: {"epochSecond": 123, "nano": 55}, field1: 'a'}
+                    your function should be: lambda m: m['ts']
         """
+        # TODO
+        #   We can add default `get_timestamp_func` using resolvers.get_timestamp
+
         while len(self) > 0:
+            # TODO
+            #   pop(0) complexity for list - O(n)
+            #   It's better to use deque here
+            #   https://wiki.python.org/moin/TimeComplexity
+            #   or to have reversed sorting
             ts, next_stream_iterator, first_val_in_iterator = self.pop(0)
             try:
                 if first_val_in_iterator is not None:
