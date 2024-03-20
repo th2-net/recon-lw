@@ -42,7 +42,7 @@ class Streams(SortedKeyList):
     def pop(self, index=-1) -> StreamsVal:
         return super().pop(index)
 
-    def sync_streams(self, get_timestamp_func: Callable):
+    def sync_streams(self, get_timestamp_func: Callable = time_stamp_key):
         """Yields synced by `get_timestamp_func` values from the streams.
 
         Almost the same as `get_next_batch` but yields all values from all
