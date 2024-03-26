@@ -655,14 +655,14 @@ def ob_clean_book(str_time_of_event, order_book: dict) -> tuple:
     return {}, [ob_copy(order_book)]
 
 
-def ob_change_status(new_status: str, str_time_of_event, order_book: dict) -> tuple:
+def ob_change_status(new_status: str, str_time_of_event, condition: str, order_book: dict) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
         reset_aggr_seq(order_book)
 
     order_book["status"] = new_status
-
+    order_book['condition'] = condition
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["top_delta"] = 1
