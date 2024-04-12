@@ -65,11 +65,11 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
             result["book_id"] = book_id
             result["sessionId"] = mess["sessionId"]
             update_event = create_event("UpdateBookError:" + parent_event["eventName"],
-                                                 "UpdateBookError",
-                                                 event_sequence,
-                                                 ok=False,
-                                                 body=result,
-                                                 parentId=parent_event["eventId"])
+                                        "UpdateBookError",
+                                        event_sequence,
+                                        ok=False,
+                                        body=result,
+                                        parentId=parent_event["eventId"])
             update_event["attachedMessageIds"] = [mess["messageId"]]
             events.append(update_event)
         if log_entries is not None:
@@ -242,7 +242,7 @@ def read_snapshot(expanded_snapshots_stream_iter, rule_settings, saveEvents=True
             if log_book['v'] >= log_books[log_book['book_id']]['v']:
                 log_books[log_book['book_id']] = log_book
         filtered_log_books_collection = list(log_books.values())
-        filtered_log_books_collection. sort(key=lambda d: time_stamp_key(d['timestamp']))
+        filtered_log_books_collection.sort(key=lambda d: time_stamp_key(d['timestamp']))
         if saveEvents:
             for log_book in filtered_log_books_collection:
                 log_event = rule_settings.events_saver.create_event(
@@ -292,11 +292,11 @@ def process_market_data_update(mess_batch, events, books_cache, get_book_id_func
         book_ids_list, result = get_book_id_func(m)
         if result is not None:
             book_id_event = create_event("GetBookError:" + parent_event["eventName"],
-                                                  "GetBookError",
-                                                  event_sequence,
-                                                  ok=False,
-                                                  body=result,
-                                                  parentId=parent_event["eventId"])
+                                         "GetBookError",
+                                         event_sequence,
+                                         ok=False,
+                                         body=result,
+                                         parentId=parent_event["eventId"])
             book_id_event["attachedMessageIds"] = [m["messageId"]]
             events.append(book_id_event)
         if book_ids_list is not None:
@@ -363,11 +363,11 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
     log_books_collection.sort(key=lambda d: time_stamp_key(d["timestamp"]))
     for log_book in log_books_collection:
         log_event = create_event("OrderBook:" + log_book["sessionId"],
-                                          "OrderBook",
-                                          event_sequence,
-                                          ok=True,
-                                          body=log_book,
-                                          parentId=parent_event["eventId"])
+                                 "OrderBook",
+                                 event_sequence,
+                                 ok=True,
+                                 body=log_book,
+                                 parentId=parent_event["eventId"])
         log_event["attachedMessageIds"] = [log_book["source_msg_id"]]
         log_event["scope"] = log_book["sessionId"]
         events.append(log_event)
@@ -388,16 +388,18 @@ def init_ob_stream(rule_settings: dict) -> None:
         snapshots_stream = rule_settings["initial_snapshot_stream"]
         expanded_stream = (mm for m in snapshots_stream for mm in options.mfr.expand_message(m))
         expanded_stream_iter = iter(expanded_stream)
-        rule_sett_obj = RuleSettings(rule_settings["snapshot_stop_func"], rule_settings["get_book_id"], 
+        rule_sett_obj = RuleSettings(rule_settings["snapshot_stop_func"], rule_settings["get_book_id"],
                                      rule_settings["update_book_rule"], rule_settings["check_book_rule"],
-                                     rule_settings["events_saver"], rule_settings["rule_root_event"], 
-                                     rule_settings["initial_book_params"], 
+                                     rule_settings["events_saver"], rule_settings["rule_root_event"],
+                                     rule_settings["initial_book_params"],
                                      rule_settings["event_sequence"])
-        
-        rule_sett_obj.set('log_books_filter', rule_settings["log_books_filter"] if "log_books_filter" in rule_settings else None)
-        rule_sett_obj.set('aggregate_batch_updates', rule_settings["aggregate_batch_updates"] if "aggregate_batch_updates" in rule_settings else False)
-        
-        books, start_seq_id = read_snapshot(expanded_stream_iter,rule_sett_obj)        
+
+        rule_sett_obj.set('log_books_filter',
+                          rule_settings["log_books_filter"] if "log_books_filter" in rule_settings else None)
+        rule_sett_obj.set('aggregate_batch_updates', rule_settings[
+            "aggregate_batch_updates"] if "aggregate_batch_updates" in rule_settings else False)
+
+        books, start_seq_id = read_snapshot(expanded_stream_iter, rule_sett_obj)
         if books is not None:
             rule_settings["books_cache"] = {}
             rule_settings["start_seq_id"] = start_seq_id
@@ -447,10 +449,10 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
     gaps = rule_settings["sequence_cache"].get_next_gaps()
     if len(gaps) > 0:
         gap_event = create_event("SeqGap:" + rule_settings["rule_root_event"]["eventName"], "SeqGap",
-                                          event_sequence, ok=False,
-                                          body={"sessionId": rule_settings["sessionId"],
-                                                "gaps": gaps},
-                                          parentId=rule_settings["rule_root_event"]["eventId"])
+                                 event_sequence, ok=False,
+                                 body={"sessionId": rule_settings["sessionId"],
+                                       "gaps": gaps},
+                                 parentId=rule_settings["rule_root_event"]["eventId"])
         save_events_func([gap_event])
     ## Process duplicated
     # duplicates = rule_settings["sequence_cache"]["duplicates"]
@@ -460,14 +462,14 @@ def flush_ob_stream(ts: dict, rule_settings: dict, event_sequence: dict, save_ev
     for i in range(0, n_dupl):
         item = duplicates.pop(0)
         d_ev = create_event("Duplicate:" + rule_settings["rule_root_event"]["eventName"],
-                                     "Duplicate",
-                                     event_sequence,
-                                     ok=False,
-                                     body={"seq_num": item[0],
-                                           "msg1": item[1],
-                                           "msg2": item[2],
-                                           "sessionId": rule_settings["sessionId"]},
-                                     parentId=rule_settings["rule_root_event"]["eventId"])
+                            "Duplicate",
+                            event_sequence,
+                            ok=False,
+                            body={"seq_num": item[0],
+                                  "msg1": item[1],
+                                  "msg2": item[2],
+                                  "sessionId": rule_settings["sessionId"]},
+                            parentId=rule_settings["rule_root_event"]["eventId"])
         d_ev["attachedMessageIds"] = [item[1]["messageId"], item[2]["messageId"]]
         dupl_events.append(d_ev)
     save_events_func(dupl_events)
@@ -601,7 +603,8 @@ def ob_delete_order(order_id: str, str_time_of_event, order_book: dict, side: st
 
 
 def ob_trade_order(order_id: str, traded_price: float, traded_size: int, str_time_of_event,
-                   order_book: dict) -> tuple:
+                   order_book: dict, trade_type: str = "", trade_id: str = "", venue: str = "",
+                   legs: list[dict] = None, extra_fields: dict = None) -> tuple:
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
@@ -872,7 +875,9 @@ def process_trade(trade_price: float, traded_qty: int, order_book: dict):
     return errors
 
 
-def ob_market_data_trade(trade_price: float, traded_qty: int, str_time_of_event, order_book: dict):
+def ob_market_data_trade(trade_price: float, traded_qty: int, str_time_of_event, order_book: dict,
+                         trade_type: str = "", trade_id: str = "", venue: str = "",
+                         legs: list[dict] = None, extra_fields: dict = None):
     if "aggr_seq" not in order_book:
         init_aggr_seq(order_book)
     else:
