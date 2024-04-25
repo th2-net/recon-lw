@@ -401,8 +401,11 @@ def init_ob_stream(rule_settings: dict) -> None:
 
         books, start_seq_id = read_snapshot(expanded_stream_iter, rule_sett_obj)
         if books is not None:
-            rule_settings["books_cache"] = {}
+            rule_settings["books_cache"] = books
             rule_settings["start_seq_id"] = start_seq_id
+        else:
+            rule_settings["books_cache"] = {}
+            rule_settings["start_seq_id"] = -1
     else:
         rule_settings["books_cache"] = {}
         rule_settings["start_seq_id"] = -1
