@@ -321,7 +321,7 @@ def process_market_data_update(mess_batch, events, books_cache, get_book_id_func
             process_operations_batch(chunk, events, book_id, book, check_book_rule,
                                      event_sequence, parent_event, log_books_filter,
                                      log_books_collection,
-                                     aggregate_batch_updates)
+                                     aggregate_batch_updates, meta_extract)
 
 
 def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book_id_func,
