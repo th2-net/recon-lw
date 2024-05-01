@@ -253,6 +253,7 @@ class LastStateMatcher:
                 time_stamp_key(edge_timestamp))
         else:
             search_edge = len(self._search_time_index)
+            #print('search_edge', search_edge)
 
         for n in range(search_edge):
             nxt = self._search_time_index.pop(0)
@@ -260,29 +261,39 @@ class LastStateMatcher:
             key1 = nxt[1]  # TODO -- that is actually key2
             o1 = nxt[2]  # second stream order
 
-            if key1 not in self._state_cache:
-                o2 = None
+            matches = []
+            tech = None
+            if isinstance(key1, list):
+                keys = key1
             else:
-                records_times = self._state_cache[key1]["records_times"]
-                i = records_times.bisect_key_right(
-                    time_stamp_key(ts1))
-                if i == 0:
-                    o2 = self._state_cache[key1]["prior_o"]
+                keys = [key1]
+            for key1 in keys:
+                if key1 not in self._state_cache:
+                    o2 = None
                 else:
-                    ts2 = records_times[i-1]
-                    sti = self._state_time_index.bisect_key_left(
-                        f"{time_stamp_key(ts2)}_{key1}")
-                    o2 = self._state_time_index[sti][3]
-            tech = {"key1": key1,
-                    "ts1": ts1,
-                    "state_cache": self._state_cache.get(key1)}
-            # TODO 1 -- what's the idea to pass
-            #   self._custom_settings, self._create_event, self._send_events
-            #   if the user provides self._interpret_func and can put them there manually?
-            # TODO 2
-            #   [o1, o2, tech] -- what is the idea to pass the list?
-            #   It's more convenient to pass the object with fields.
-            self._interpret_func([o1, o2, tech], self._custom_settings, self._create_event, self._send_events)
+                    records_times = self._state_cache[key1]["records_times"]
+                    i = records_times.bisect_key_right(
+                        time_stamp_key(ts1))
+                    if i == 0:
+                        o2 = self._state_cache[key1]["prior_o"]
+                    else:
+                        ts2 = records_times[i - 1]
+                        sti = self._state_time_index.bisect_key_left(
+                            f"{time_stamp_key(ts2)}_{key1}")
+                        o2 = self._state_time_index[sti][3]
+                matches.append(o2)
+                tech = {"key1": key1,
+                        "ts1": ts1,
+                        "state_cache": self._state_cache.get(key1)}
+                # TODO 1 -- what's the idea to pass
+                #   self._custom_settings, self._create_event, self._send_events
+                #   if the user provides self._interpret_func and can put them there manually?
+                # TODO 2
+                #   [o1, o2, tech] -- what is the idea to pass the list?
+                #   It's more convenient to pass the object with fields.
+                matches.append(tech)
+            matches.insert(0, o1)
+            self._interpret_func(matches, self._custom_settings, self._create_event, self._send_events)
 
         if horizon_time is not None:
             edge_timestamp = {"epochSecond": horizon_time["epochSecond"] - self._horizon_delay_seconds,
