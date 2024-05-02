@@ -360,7 +360,7 @@ def process_ob_rules(sequenced_batch: SortedKeyList, books_cache: dict, get_book
                                check_book_rule, event_sequence, parent_event, initial_book_params,
                                log_books_filter, log_books_collection, aggregate_batch_updates, meta_extract)
 
-    log_books_collection.sort(key=lambda d: time_stamp_key(d["timestamp"]))
+    log_books_collection.sort(key=lambda d: d["sequence"]) #time_stamp_key(d["timestamp"]))
     for log_book in log_books_collection:
         log_event = create_event("OrderBook:" + log_book["sessionId"],
                                  "OrderBook",
