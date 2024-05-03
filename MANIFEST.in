@@ -1,3 +1,5 @@
 include README.md
 include requirements.txt
 include package_info.json
+include example
+include example/example.ipynb
