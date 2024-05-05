@@ -12,7 +12,7 @@ class MissedMessageHandler:
                  miss_categoriser: MissCategorizer):
         self.recon_context = recon_context
         self.efr = recon_context.get_efr()
-        self.mfr = recon_context.get_mft()
+        self.mfr = recon_context.get_mfr()
         self.miss_categoriser = miss_categoriser
 
     def write_to_file(self, file: FileIO):
@@ -22,9 +22,9 @@ class MissedMessageHandler:
             type = self.efr.get_type(e)
             recon_name = e['reconName']
             attached = e["attachedMessageIds"]
-            if type == ReconType.BasicReconMissLeft:
+            if type == ReconType.BasicReconMissLeft.value:
                 print("\t\t NO_ORIG", recon_name, attached, e['body']['key'], file)
-            elif type == ReconType.BasicReconMissRight:
+            elif type == ReconType.BasicReconMissRight.value:
                 print("\t\t NO_COPY", recon_name, attached, e['body']['key'], file)
 
     def categorise_and_filter(self, messages):
