@@ -1,14 +1,17 @@
 from recon_lw.matching.key_functions.base import KeyFunctionProvider
-from recon_lw.interpretation.filter import FilterChain, Filter
-from recon_lw.matching.matching_key_extractor import BasicSeparatorMatchingKeyExtractor
-from recon_lw.matching.matching_key_extractor.base import MatchingKeyExtractor, MatchingKeyExtractorProtocol
+from recon_lw.interpretation.filter import FilterChain
+from recon_lw.matching.matching_key_extractor.base import IMatchingKeyExtractor, \
+    MatchingKeyExtractorProtocol
 from typing import Set, List
 from recon_lw.interpretation.adapter.base import Adapter
 from recon_lw.core.type.types import KeyFunctionType, Message
 
+
 class BasicCopyKeyFunctionProvider(KeyFunctionProvider):
 
-    def __init__(self, filter_chain: FilterChain, matching_key: MatchingKeyExtractorProtocol, key_fields: Set[str]):
+    def __init__(self, filter_chain: FilterChain,
+                 matching_key: MatchingKeyExtractorProtocol,
+                 key_fields: Set[str]):
         super().__init__()
         self._filter_chain = filter_chain
         self._matching_key = matching_key
@@ -24,6 +27,5 @@ class BasicCopyKeyFunctionProvider(KeyFunctionProvider):
                         f"Copy matching fun can have only single value, received {mks}"
                     )
                 return mks[0]
-
 
         return key_function
