@@ -7,6 +7,7 @@ from typing import Protocol
 class EventCategory:
     name: str
 
+
 class IEventCategoryExtractor(ABC):
 
     def __call__(self, recon_name: str, orig, copy, event: dict) -> EventCategory:
@@ -16,9 +17,11 @@ class IEventCategoryExtractor(ABC):
     def extract_category(self, recon_name: str, orig, copy, event: dict) -> EventCategory:
         pass
 
+
 class IEventCategoryExtractorProtocol(Protocol):
-    def __call__(self, recon_name: str, orig, copy, event: dict):
+    def __call__(self, recon_name: str, orig, copy, event: dict) -> EventCategory:
         pass
+
 
 class IDiffCategoryExtractor(ABC):
     def __call__(self, recon_name: str, diff: dict, event: dict) -> EventCategory:
