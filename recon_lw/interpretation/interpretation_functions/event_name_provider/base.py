@@ -21,6 +21,7 @@ class ReconEventNameProvider(ABC):
     def get_match_diff_event_name(self):
         pass
 
+
 class ReconEventNameProviderProtocol(Protocol):
-    def __call__(self, event_type: ReconType, successful: bool=True):
+    def __call__(self, event_type: ReconType, successful: bool = True):
         pass
