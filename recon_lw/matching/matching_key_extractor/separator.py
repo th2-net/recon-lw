@@ -1,10 +1,10 @@
 from typing import Any, Dict, Set, List
-from recon_lw.matching.matching_key_extractor.base import MatchingKeyExtractor
+from recon_lw.matching.matching_key_extractor.base import IMatchingKeyExtractor
 
 from recon_lw.interpretation.adapter.base import Adapter
 
 
-class BasicSeparatorMatchingKeyExtractor(MatchingKeyExtractor):
+class BasicSeparatorMatchingKeyExtractor(IMatchingKeyExtractor):
 
     def __init__(self, separator: str):
         self.separator = separator
@@ -19,7 +19,6 @@ class BasicSeparatorMatchingKeyExtractor(MatchingKeyExtractor):
                 for _ in range(count):
                     yield v
 
-        result = []
         items = {}
         max_count = 1
         for field in fields:
