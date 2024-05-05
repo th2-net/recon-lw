@@ -15,4 +15,4 @@ class BasicReconEventNameProvider(ReconEventNameProvider):
         return f"{self.event_name_prefix}[match]"
 
     def get_match_diff_event_name(self):
-        return f"{self.event_name_prefix}[match[diff_found]]"
+        return f"{self.event_name_prefix}[match][diff_found]"
