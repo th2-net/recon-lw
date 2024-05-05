@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import List, Callable, Dict
 
 from th2_data_services.data import Data
 from th2_data_services.utils.converters import Th2TimestampConverter
@@ -8,7 +8,17 @@ from recon_lw.core.type.types import Message
 from th2_data_services.config import options as o
 
 
-def get_group_data_map(datas_list: List[Data], default: str):
+def get_group_data_map(datas_list: List[Data], default: str) -> Dict[str, Data]:
+    """
+
+    Args:
+        datas_list:
+        default:
+
+    Returns:
+        {group-name: Data object}
+
+    """
     return {do.metadata.get('group', default): do for do in datas_list}
 
 def get_msgs_by_id(data: Data, ids: list, id_function: Callable[[Message], List[str]]):
