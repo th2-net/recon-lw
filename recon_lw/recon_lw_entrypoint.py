@@ -1,4 +1,4 @@
-from recon_lw.core.EventsSaver import EventsSaver
+from recon_lw.core.EventsSaver import EventsSaver, IEventsSaver
 from typing import Union, Callable, Any
 
 from recon_lw.core.rule import AbstractRule
@@ -10,10 +10,15 @@ from recon_lw.matching.flush_function import FlushFunction
 from recon_lw.matching.old.matching import init_matcher, collect_matcher, flush_matcher
 
 
-def execute_standalone(message_pickle_path, sessions_list, result_events_path,
-                       rules: Dict[str, Dict[str, Union[Dict[str, Any], AbstractRule]]],
-                       data_objects=None,
-                       buffer_len=100):
+def execute_standalone(
+        message_pickle_path,
+        sessions_list,
+        result_events_path,
+        rules: Dict[str, Dict[str, Union[Dict[str, Any], AbstractRule]]],
+        data_objects=None,
+        buffer_len=100,
+        events_saver: Optional[IEventsSaver] = None,
+):
     """Entrypoint for recon-lw.
 
     It generates ReconEvents and stores them in the `result_events_path` file
@@ -40,7 +45,8 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path,
 
     """
     box_ts = datetime.now()
-    events_saver = EventsSaver(result_events_path)
+    if events_saver is None:
+        events_saver = EventsSaver(result_events_path)
 
     event_sequence = EventSequence(name="recon_lw", timestamp=str(box_ts.timestamp()), n=0).to_dict()
     root_event = create_event("recon_lw " + box_ts.isoformat(), "Microservice", event_sequence)
@@ -120,12 +126,16 @@ def execute_standalone(message_pickle_path, sessions_list, result_events_path,
     # one final flush
     events_saver.flush()
 
+    # TODO
+    #   Probably It's a good idea to return ReconContext here.
+
+
 def preprocess_rule_config_object(
     rule_key: str,
     event_sequence: dict,
     root_event: dict,
     rule: AbstractRule,
-    events_saver: EventsSaver
+    events_saver: IEventsSaver
 ) -> AbstractRule:
     rule_root_event = create_event(rule_key, "LwReconRule",
                                    event_sequence,
@@ -139,7 +149,7 @@ def preprocess_rule_config_dict(
     event_sequence: dict,
     root_event: dict,
     rule: dict,
-    events_saver: EventsSaver
+    events_saver: IEventsSaver
 ) -> dict:
     rule_root_event = create_event(rule_key, "LwReconRule",
                                    event_sequence,
