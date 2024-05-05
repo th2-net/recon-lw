@@ -1,16 +1,6 @@
-import os
-from typing import List
-
 from th2_data_services.data import Data
-from th2_data_services.utils.event_utils import totals
+from th2_data_services.utils.data_utils import read_all_pickle_files_from_the_folder
 
 
-def get_recon_events(events_directory: str):
-    files = os.listdir(events_directory)
-    rslt = Data([])
-    for f in files:
-        if not f.endswith(".pickle"):
-            continue
-        rslt += Data.from_cache_file(os.path.join(events_directory, f))
-
-    return rslt
+def get_recon_events(events_directory: str) -> Data:
+    return read_all_pickle_files_from_the_folder(events_directory)
