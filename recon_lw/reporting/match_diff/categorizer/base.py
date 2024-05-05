@@ -9,11 +9,17 @@ from recon_lw.reporting.match_diff.categorizer.types import MatchesStats
 
 
 class IErrorCategorizer(ABC):
-    def __init__(self):
-        self._error_stats = ErrorCategoriesStats()
-        self._matches_stats = MatchesStats()
-        self._problem_fields = ProblemFields()
-        self._error_examples = ErrorExamples()
+    def __init__(
+            self,
+            error_stats=ErrorCategoriesStats(),
+            matches_stats=MatchesStats(),
+            problem_fields=ProblemFields(),
+            error_examples=ErrorExamples(),
+    ):
+        self._error_stats = error_stats
+        self._matches_stats = matches_stats
+        self._problem_fields = problem_fields
+        self._error_examples = error_examples
 
     def process_events(self, events: List[dict]) -> ReconErrorStatsContext:
         for event in events:
@@ -27,4 +33,10 @@ class IErrorCategorizer(ABC):
 
     @abstractmethod
     def process_event(self, event: dict):
+        """It expects that this function will collect metadata and store it to:
+             - self._error_stats
+             - self._matches_stats
+             - self._problem_fields
+             - self._error_examples
+            """
         pass
