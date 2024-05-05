@@ -18,20 +18,6 @@ class ConstantExtractor(Extractor):
         return self.return_value
 
 
-class ConstantExtractorBuilder:
-    def __init__(self):
-        self.return_value = None
-
-    def set_return_value(self, return_value: Any) -> 'ConstantExtractorBuilder':
-        self.return_value = return_value
-        return self
-
-    def build(self) -> ConstantExtractor:
-        if self.return_value is None:
-            raise ValueError("Return value must be set.")
-        return ConstantExtractor(self.return_value)
-
-
 class NEConstantExtractor(ConstantExtractor):
     def __init__(self):
         super().__init__(Extractor.NOT_EXTRACTED)
