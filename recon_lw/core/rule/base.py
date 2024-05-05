@@ -2,14 +2,14 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from recon_lw.core.EventsSaver import EventsSaver
+from recon_lw.core.EventsSaver import IEventsSaver
 from recon_lw.matching.init_function import AbstractMatcherContext
 
 
 class RuleContext:
     def __init__(self,
                  rule_root_event: dict,
-                 event_saver: EventsSaver,
+                 event_saver: IEventsSaver,
                  event_sequence: Dict[str, Any]
                  ):
         self.rule_root_event = rule_root_event
@@ -23,6 +23,7 @@ class RuleContext:
             rule_context['event_sequence'],
             rule_context['event']
         )
+
 
 class AbstractRule(ABC):
 
@@ -43,7 +44,7 @@ class AbstractRule(ABC):
     def get_root_event(self) -> Dict[str, Any]:
         return self.rule_context.rule_root_event
 
-    def get_event_saver(self) -> EventsSaver:
+    def get_event_saver(self) -> IEventsSaver:
         return self.rule_context.event_saver
 
     def get_event_sequence(self) -> Dict[str, Any]:

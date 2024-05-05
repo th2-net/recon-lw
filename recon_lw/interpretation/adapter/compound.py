@@ -1,8 +1,11 @@
+from __future__ import annotations
 from recon_lw.interpretation.condition.base import Condition
 from recon_lw.interpretation.adapter.base import Adapter
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple, Dict, Any
 
-from recon_lw.interpretation.field_extractor import Extractor
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from recon_lw.interpretation.field_extractor import Extractor
 
 
 class CompoundAdapter(Adapter):
@@ -52,6 +55,15 @@ class CompoundAdapter(Adapter):
     def get_fields_group(self, m, group_name):
         handler = self.get_adapter(m)
         return handler.get_fields_group(m, group_name)
+
+    def get_root_message_field(self, message, parameter_name,
+                               strict=False) -> Any:
+        # FIXME: Not implemented
+        pass
+
+    def get_metadata_field(self, message, field_name, strict=False) -> Any:
+        # FIXME: Not implemented
+        pass
 
 
 class CompoundAdapterBuilder:
