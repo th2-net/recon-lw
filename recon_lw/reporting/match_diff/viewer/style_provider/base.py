@@ -11,6 +11,7 @@ class ErrorExamplesStyleProvider(ABC):
     def get_styles(self) -> str:
         pass
 
+
 class ErrorExamplesStyleProviderProtocol(Protocol):
     def __call__(self) -> str:
         pass

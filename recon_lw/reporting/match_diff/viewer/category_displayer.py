@@ -8,6 +8,7 @@ from tabulate import tabulate
 from th2_data_services.data import Data
 
 from recon_lw.core.type.types import Message
+from recon_lw.reporting.match_diff.categorizer import EventCategory
 from recon_lw.reporting.match_diff.categorizer.types.context import ReconErrorStatsContext
 from recon_lw.reporting.match_diff.viewer.color_provider.base import ICategoryColorProvider, \
     ICategoryColorProviderProtocol
@@ -22,20 +23,34 @@ from recon_lw.reporting.recon_context.context import ReconContext
 MessageId = str
 IdProvider = Callable[[Message], List[Optional[str]]]
 
+
 class ErrorExampleDisplayer:
     def __init__(
             self,
             category_color_provider: ICategoryColorProviderProtocol,
             error_examples_styles_provider: ErrorExamplesStyleProviderProtocol
     ):
+        """Displays error examples collected by error categorizer
+        (e.g. BasicErrorCategoriser) with default styles.
+
+
+        Args:
+            category_color_provider:
+            error_examples_styles_provider:
+        """
         self.category_color_provider = category_color_provider
         self.error_examples_styles_provider = error_examples_styles_provider
         self._uid = 1
 
     def apply_styles(self):
+        """Applies CSS styles for HTML in Jupyter."""
         display(HTML(self.error_examples_styles_provider()))
 
-    def display_category(self, category: str, examples: List[Tuple[MatchDiffExampleData, MatchDiffExampleData]]) -> None:
+    def display_category(
+            self,
+            category: EventCategory,
+            examples: List[Tuple[MatchDiffExampleData, MatchDiffExampleData]]
+    ) -> None:
         data = self._get_example_comparison_table(
             category,
             examples,
@@ -44,10 +59,11 @@ class ErrorExampleDisplayer:
         self._uid += 1
         display(HTML(data))
 
-    def _get_example_comparison_table(self,
-                                      category: str,
-                                      examples: List[Tuple[MatchDiffExampleData, MatchDiffExampleData]],
-                                      uid: int
+    def _get_example_comparison_table(
+            self,
+            category: EventCategory,
+            examples: List[Tuple[MatchDiffExampleData, MatchDiffExampleData]],
+            uid: int
     ):
         category_color = self.category_color_provider(category)
         category_style = f"background-color: {category_color}"
@@ -105,6 +121,7 @@ class ErrorExampleDisplayer:
         </tr>
         '''
 
+
 class MatchDiffViewer:
     def __init__(
             self,
@@ -116,15 +133,39 @@ class MatchDiffViewer:
             recon_context: ReconContext,
             error_example_displayer: ErrorExampleDisplayer
     ):
-        self.context = recon_stats_context
-        self.events: List[dict] = recon_context.get_recon_events()
-        self.messages = messages
-        self.mfr = recon_context.get_mft()
-        self.id_provider = message_business_ids_provider
+        # TODO
+        #   1. looks strange that we need 2 almost the same objects
+        #       - messages
+        #       - data_objects
+        #     Probably we can pass only one of them. E.g. data_objects
+        """
+
+        Args:
+            recon_stats_context:
+            messages: Data object with all messages that were used during
+                reconciliation. It will search messages by IDs from this object.
+            data_objects: List of Data objects that were used during
+                reconciliation.
+            message_business_ids_provider: The function that returns a list
+                of matching-keys.
+                That should be a function that
+                    - takes: a message (usually real exchange message in dict
+                        format).
+                    - returns: a list of matching-keys
+                        e.g. ['key-field1-val:key-field2-val']
+            message_content_provider:
+            recon_context:
+            error_example_displayer:
+        """
+        self.context: ReconErrorStatsContext = recon_stats_context
+        self.events: Data[dict] = recon_context.get_recon_events()
+        self.messages: Data = messages
+        self.mfr = recon_context.get_mfr()
+        self.id_provider: IdProvider = message_business_ids_provider
         self.data_objects: List[Data] = data_objects
         self.content_provider: IExampleContentProvider = message_content_provider
         self._cache = None
-        self.error_example_displayer = error_example_displayer
+        self.error_example_displayer: ErrorExampleDisplayer = error_example_displayer
 
     def _get_cache(self) -> Dict[MessageId, Message]:
         if self._cache:
