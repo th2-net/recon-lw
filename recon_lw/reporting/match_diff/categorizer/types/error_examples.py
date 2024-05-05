@@ -1,16 +1,29 @@
 from collections import defaultdict
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from recon_lw.reporting.match_diff.categorizer.event_category import EventCategory
 
 
+recon_err_example_T = Dict[EventCategory, List[Optional[List[str]]]]
+examples_T = Dict[str, recon_err_example_T]
+
+
 class ErrorExamples:
-    def __init__(self, category_example_limit=5):
-        self._error_examples = defaultdict(lambda: defaultdict(list))
+    def __init__(self, category_example_limit: int = 5):
+        """
+
+        Args:
+            category_example_limit: The number of collected examples for every
+                category is limited by this parameter.
+        """
+        self._error_examples: examples_T = defaultdict(lambda: defaultdict(list))
         self.category_example_limit = category_example_limit
         self._error_ids = []
 
-    def add_error_example(self, recon_name: str, error_category: EventCategory, attached_ids: Optional[List[str]]):
+    def add_error_example(self,
+                          recon_name: str,
+                          error_category: EventCategory,
+                          attached_ids: Optional[List[str]]):
         if attached_ids is not None:
             n = len(self._error_examples[recon_name][error_category])
             if n < self.category_example_limit:
@@ -24,5 +37,5 @@ class ErrorExamples:
     def get_affected_recons(self):
         return self._error_examples.keys()
 
-    def get_examples(self, recon_name) -> dict:
+    def get_examples(self, recon_name) -> recon_err_example_T:
         return self._error_examples[recon_name]
