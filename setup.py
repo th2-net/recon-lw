@@ -37,7 +37,7 @@ setup(
     author_email="th2-devs@exactprosystems.com",
     url="https://github.com/th2-net/recon-lw",
     license="Apache License 2.0",
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     install_requires=requirements,
     packages=find_packages(include=["recon_lw*"]),
     include_package_data=True,
