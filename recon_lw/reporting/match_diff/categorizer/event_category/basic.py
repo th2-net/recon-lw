@@ -59,7 +59,7 @@ class BasicDiffCategoryExtractor(IDiffCategoryExtractor):
 
         Args:
             recon_name:
-            diff:
+            diff: dict representation of `ReconEventDiff`
             event:
 
         Returns:
@@ -67,9 +67,11 @@ class BasicDiffCategoryExtractor(IDiffCategoryExtractor):
         """
         expected = diff["expected"]
         actual = diff["actual"]
-        field = diff["field_name"]
+        field = diff["field"]
 
         if isinstance(expected, dict):
+            # TODO
+            #   1. expected['message'] -- we have to describe this format
             cat = f"{recon_name}: {field}: {expected['message']}"
             # TODO - later there will  `known_issues` class that will
             #   have special method to find matched category (not only by the name)
