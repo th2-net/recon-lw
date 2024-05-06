@@ -117,7 +117,7 @@ class BasicReconEvent:
     @property
     def body(self):
         full_body = {
-            **self.body,
+            **self._body,
             "diff": list(map(lambda d: d.to_dict(), self.diffs)),
             "key": self.matching_key,
         }
