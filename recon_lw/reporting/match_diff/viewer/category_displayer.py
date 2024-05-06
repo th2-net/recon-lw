@@ -219,9 +219,8 @@ class MatchDiffViewer:
                         e.g. ['key-field1-val:key-field2-val']
             message_content_provider:
                 Function or `IExampleContentProvider` class that provides
-                FIXME:
-                    ЭТО НУЖНО ДЛЯ ТОГО, ЧТОБЫ ОРДЕР ХИСТОРИ СТРОИТЬ.
-                    НЕ ДУМАЮ, ЧТО ЭТО ДОЛЖНО В ТАКОМ ВИДЕ ЗДЕСЬ ОСТАТЬСЯ!!
+                CategoryTableView
+
             recon_context:
             error_example_displayer:
         """
@@ -250,6 +249,10 @@ class MatchDiffViewer:
             return self._cache
 
         self._cache = {}
+
+        # FIXME:
+        #   The problem here that we use self.mfr.get_id(message)
+        #   But we can actually provide events. (any stream, not only messages)
 
         for message in self.messages:
             msg_id = self.mfr.get_id(message)

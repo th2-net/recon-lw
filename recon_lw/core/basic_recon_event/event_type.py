@@ -27,10 +27,13 @@ BaseReconEventType = IBaseReconEventType(
 
 class ReconEventType(Enum):
     # TODO
+    #   1)
     #   I don't sure that we need `BasicRecon` prefix
     #   What's the sense to use it? We used it on the *** project because
     #   we had recon with name Basic.
     #   Actually a user can have any names for Events
+    #   2)
+    #   Probably it's better to change to Just class (no Enum)
     BasicReconRoot = 'BasicReconRoot'
     BasicReconMatch = 'BasicReconMatch'
     BasicReconMissLeft = 'BasicReconMissLeft'

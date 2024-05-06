@@ -1,5 +1,5 @@
 sortedcontainers
-th2-data-services~=2.0.0.dev8935749405
+th2-data-services~=2.0.0.dev8969866469
 th2-data-services-lwdp>=2.1  # We cannot set exact version because it can be as 2 and as 3.
 
 # For viewers required. Install separatelly if required.
