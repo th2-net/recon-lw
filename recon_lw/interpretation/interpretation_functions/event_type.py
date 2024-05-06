@@ -1,6 +1,7 @@
-from enum import Enum
+from recon_lw.core.basic_recon_event import ReconEventType
 
-class ReconType(Enum):
-    BasicReconMatch = 'BasicReconMatch'
-    BasicReconMissRight = 'BasicReconMissLeft'
-    BasicReconMissLeft = 'BasicReconMissRight'
+# FIXME - WARNING
+#   Don't use this module,
+#       use `from recon_lw.core.basic_recon_event import ReconEventType`
+# This left for backward compatibility
+ReconType = ReconEventType

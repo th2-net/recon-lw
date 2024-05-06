@@ -317,7 +317,7 @@ These entities are used to give some stats on events gathered during reconcillat
 - **Usage**: Defines how category names should be extracted from recon events.
 
 Implementations:
-- [BasicErrorCategoriser](recon_lw/reporting/match_diff/categorizer/basic.py) - describes simple error categoriser which collects categories basing on [category extractor strategy](recon_lw/reporting/match_diff/categorizer/event_category/base.py) which desribes the way to extract category name for different event types:
+- [BasicErrorCategorizer](recon_lw/reporting/match_diff/categorizer/basic.py) - describes simple error categoriser which collects categories basing on [category extractor strategy](recon_lw/reporting/match_diff/categorizer/event_category/base.py) which desribes the way to extract category name for different event types:
   - miss left
   - miss right
   - match
