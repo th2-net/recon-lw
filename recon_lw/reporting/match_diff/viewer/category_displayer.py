@@ -1,6 +1,6 @@
 import json
 from itertools import chain
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from IPython.core.display import HTML, Markdown
 from IPython.core.display_functions import display
@@ -260,7 +260,25 @@ class MatchDiffViewer:
                 self._cache[msg_id] = message
         return self._cache
 
-    def display_report(self):
+    def display_report(self, out_categories_limit: Optional[int] = 5000):
+        """
+
+        Args:
+            out_categories_limit: If provided, will be shown only this number
+                of category examples. Use '-1' to have unlimited number of
+                examples.
+                - It was limited because, in most of the cases, if you have too
+                many examples, you have bad categories.
+                - Also, you should recognize that every shown example takes your
+                RAM in the browser.
+
+        Returns:
+
+        """
+        if out_categories_limit == -1:
+            out_categories_limit = 999999999999999999
+        categories_shown = 0
+
         affected_recons = self.context.error_examples.get_affected_recons()
 
         if not affected_recons:
@@ -280,6 +298,12 @@ class MatchDiffViewer:
             # group_data_map = get_group_data_map(self.data_objects, 'default')
             self.error_example_displayer.apply_styles()
             for category, err_examples_ids in self.context.error_examples.get_examples(recon_name).items():
+                if categories_shown >= out_categories_limit:
+                    print("WARNING: out_categories_limit reached. \n"
+                          " - in most of the cases, if you have too many examples, you have bad categories.\n"
+                          " - Use '-1' to have unlimited number of examples.")
+                    return
+                categories_shown += 1
 
                 rows = []
 
