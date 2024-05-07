@@ -308,6 +308,10 @@ class MatchDiffViewer:
                 rows = []
 
                 for err_ex_msg_ids in err_examples_ids:
+                    # TODO
+                    #   1. It's strange that we don't provide the result recon event
+                    #       to this function.
+                    #   2. Cache should be moved outside, I think.
                     table_view = self.content_provider.get_example_content(
                         err_ex_msg_ids=err_ex_msg_ids,
                         context=self.context,
