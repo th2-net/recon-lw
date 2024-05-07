@@ -106,9 +106,10 @@ class StateStream:
             if action == 'c':
                 if key in snapshot:
                     # Consistency error
-                    err = self._events_saver.create_event("ObjectAlreadyPresent",
-                                                          "StateStreamError", False,
-                                                          {'update': tpl})
+                    err = self._events_saver.create_event(
+                        "ObjectAlreadyPresent",
+                        "StateStreamError", False,
+                        {'update': tpl, 'snap_id': snap_id})
                     self._events_saver.save_events([err])
                 else:
                     snapshot[key] = state
@@ -117,9 +118,10 @@ class StateStream:
             elif action == 'u':
                 if key not in snapshot:
                     # Consistency error
-                    err = self._events_saver.create_event("ObjectDontExist",
-                                                          "StateStreamError", False,
-                                                          {'update': tpl})
+                    err = self._events_saver.create_event(
+                        "ObjectDontExist",
+                        "StateStreamError", False,
+                        {'update': tpl, 'snap_id': snap_id})
                     self._events_saver.save_events([err])
                 else:
                     state = self._state_transition_func(state, snapshot[key])
@@ -129,9 +131,10 @@ class StateStream:
             elif action == 'd':
                 if key not in snapshot:
                     # Consistency error
-                    err = self._events_saver.create_event("ObjectDontExist",
-                                                          "StateStreamError", False,
-                                                          {'update': tpl})
+                    err = self._events_saver.create_event(
+                        "ObjectDontExist",
+                        "StateStreamError", False,
+                        {'update': tpl, 'snap_id': snap_id})
                     self._events_saver.save_events([err])
                 else:
                     snapshot.pop(key)
