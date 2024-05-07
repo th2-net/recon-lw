@@ -19,7 +19,7 @@ class StateStream:
                  state_transition_func,
                  events_saver: IEventsSaver,
                  combine_instantenious_snapshots=True,
-                 get_next_update_func2 = None
+                 get_next_update_func2=None
                  ) -> None:
         """
 
@@ -30,6 +30,12 @@ class StateStream:
             state_transition_func:
             events_saver:
             combine_instantenious_snapshots:
+            get_next_update_func2:
+
+        Note:
+            1. Can be used only `get_next_update_func` or `get_next_update_func2`
+                at the same time.
+
         """
         self._get_next_update_func = get_next_update_func
         self._get_snapshot_id_func = get_snapshot_id_func
