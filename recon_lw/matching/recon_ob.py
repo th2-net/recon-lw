@@ -161,6 +161,7 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
         obs[-1]["aggr_seq"]["limit_delta"] = 0 if limit_not_affected and obs[-1]["aggr_seq"][
             "limit_delta"] == 0 else 1
         obs[-1]["aggr_seq"]["limit_v2"] = updated_v2
+        obs[-1]["aggr_seq"]["l"] = min(ob["aggr_seq"]["l"] for ob in obs)        
     else:
         updated_limit_v2 = 0
         updated_top_v2 = 0
@@ -498,18 +499,18 @@ def ob_copy(b):
 
 
 def init_aggr_seq(order_book: dict) -> None:
-    order_book["aggr_seq"] = {"top_delta": 0, "limit_delta": 0}
+    order_book["aggr_seq"] = {"top_delta": 0, "limit_delta": 0, "l": -1}
     order_book["implied_only"] = False
 
 
 def reset_aggr_seq(order_book):
-    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0})
+    order_book["aggr_seq"].update({"top_delta": 0, "limit_delta": 0, "l": -1})
     order_book["implied_only"] = False
 
 
 def reflect_price_update_in_version(side: str, price: float, str_time_of_event, order_book: dict):
     level = get_price_level(side, price, order_book)
-
+    order_book["aggr_seq"]["l"] = level
     max_levels = order_book["aggr_max_levels"]
     if level <= max_levels:
         order_book["aggr_seq"]["limit_delta"] = 1
@@ -657,6 +658,8 @@ def ob_clean_book(str_time_of_event, order_book: dict) -> tuple:
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["top_delta"] = 1
+    order_book["aggr_seq"]["l"] = 1
+    
     # return {}, [copy.deepcopy(order_book)]
     return {}, [ob_copy(order_book)]
 
@@ -672,6 +675,7 @@ def ob_change_status(new_status: str, str_time_of_event, condition: str, order_b
     update_time_and_version(str_time_of_event, order_book)
     order_book["aggr_seq"]["limit_delta"] = 1
     order_book["aggr_seq"]["top_delta"] = 1
+    order_book["aggr_seq"]["l"] = 1
     # return {}, [copy.deepcopy(order_book)]
     return {}, [ob_copy(order_book)]
 
