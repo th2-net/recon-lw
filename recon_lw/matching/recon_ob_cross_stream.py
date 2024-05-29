@@ -171,7 +171,11 @@ def compare_full_vs_top(full_book: dict, top_book: dict):
 def ob_compare_get_timestamp_key1_key2_aggr(o, custom_settings):
     if o["body"]["aggr_seq"]["limit_delta"] not in [1, 2]:
         return None, None, None
+        
     if o["body"]["sessionId"] == custom_settings["full_session"]:
+        if 'level_limit' in custom_settings:
+            if o["body"]["aggr_seq"]["l"] > custom_settings['level_limit']:
+                return None, None, None
         return o["body"]["timestamp"], "{0}_{1}_{2}".format(o["body"]["book_id"],
                                                             o["body"]["time_of_event"],
                                                             o["body"]["aggr_seq"]["limit_v2"]), None
@@ -418,11 +422,14 @@ def ob_compare_streams(source_events_path: pathlib.PosixPath, results_path: path
         full_session = rule_params["full_session"]
         if "aggr_session" in rule_params:
             aggr_session = rule_params["aggr_session"]
+            custom_settings = {"full_session": full_session, "comp_session": aggr_session}
+            if 'level_limit' in rule_params:
+                custom_settings['level_limit'] = rule_params['level_limit']
             processor_aggr = TimeCacheMatcher(
                 rule_params["horizon_delay"],
                 ob_compare_get_timestamp_key1_key2_aggr,
                 ob_compare_interpret_match_aggr,
-                {"full_session": full_session, "comp_session": aggr_session},
+                custom_settings,
                 lambda name, ev_type, ok, body: events_saver.create_event(
                     name, ev_type, ok, body, parentId=rule_root_event["eventId"]),
                 lambda ev_batch: events_saver.save_events(ev_batch)
