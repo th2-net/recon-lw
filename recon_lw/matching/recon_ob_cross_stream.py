@@ -223,6 +223,7 @@ def ob_compare_get_timestamp_key1_key2_top_aggr(o, custom_settings):
 
 
 def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_events):
+    streams = f'{custom_settings["aggr_session"]}:{custom_settings["full_session"]}'
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_aggr(match[0]["body"], match[1]["body"])
         events_to_store = []
@@ -237,6 +238,7 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                  "time_of_event": match[0]["body"]["time_of_event"],
                  "limit_v2": match[0]["body"]["aggr_seq"]["limit_v2"],
                  "errors": comp_res,
+                 "streams": streams,
                  "full_meta" : match[0]["body"].get("meta"),
                  "aggr_meta" : match[1]["body"].get("meta")}))
         else:
@@ -250,7 +252,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                  "aggr_book_scope": match[1]["scope"],
                  "book_id": match[0]["body"]["book_id"],
                  "time_of_event": match[0]["body"]["time_of_event"],
-                 "top_v2": match[0]["body"]["aggr_seq"]["top_v2"],
+                 "limit_v2": match[0]["body"]["aggr_seq"]["limit_v2"],
+                 "streams": streams,
                  "full_meta" : match[0]["body"].get("meta"),
                  "aggr_meta" : match[1]["body"].get("meta")}))
         save_events(events_to_store)
@@ -264,6 +267,7 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
              "book_id": match[0]["body"]["book_id"],
              "time_of_event": match[0]["body"]["time_of_event"],
              "limit_v2": match[0]["body"]["aggr_seq"]["limit_v2"],
+             "streams": streams,
              "sessionId": match[0]["body"]["sessionId"],
              "full_meta" : match[0]["body"].get("meta"),
              "tech_info": tech_info})
@@ -278,6 +282,7 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
              "book_id": match[1]["body"]["book_id"],
              "time_of_event": match[1]["body"]["time_of_event"],
              "limit_v2": match[1]["body"]["aggr_seq"]["limit_v2"],
+             "streams": streams,
              "aggr_meta" : match[1]["body"].get("meta"),
              "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
