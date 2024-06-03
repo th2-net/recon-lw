@@ -223,7 +223,7 @@ def ob_compare_get_timestamp_key1_key2_top_aggr(o, custom_settings):
 
 
 def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_events):
-    streams = f'{custom_settings["aggr_session"]}:{custom_settings["full_session"]}'
+    streams = f'{custom_settings["comp_session"]}:{custom_settings["full_session"]}'
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_aggr(match[0]["body"], match[1]["body"])
         events_to_store = []
