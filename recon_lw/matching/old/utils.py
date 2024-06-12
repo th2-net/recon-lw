@@ -1,5 +1,5 @@
 from recon_lw.core.ts_converters import time_stamp_key
-from recon_lw.core.utility import message_cache_pop
+from recon_lw.core.utility import message_cache_pop, message_cache_pop_with_copies
 
 
 def flush_old(current_ts, horizon_delay, time_index):
@@ -21,8 +21,13 @@ def flush_old(current_ts, horizon_delay, time_index):
 
 def rule_flush(current_ts, horizon_delay, match_index: dict, time_index, message_cache,
                interpret_func, event_sequence: dict, send_events_func,
-               parent_event, live_orders_cache):
+               parent_event, live_orders_cache, keep_copies_for_same_m_id=False):
     old_keys = flush_old(current_ts, horizon_delay, time_index)
+
+    cache_pop_func = message_cache_pop
+    if keep_copies_for_same_m_id:
+        cache_pop_func = message_cache_pop_with_copies
+
     events = []
     for match_key in old_keys:
         elem = match_index.pop(match_key)  # elem -- can have 2 or 3 elements inside
@@ -35,7 +40,7 @@ def rule_flush(current_ts, horizon_delay, match_index: dict, time_index, message
         #   arg1 - ??
         #   arg2 - EventSequence
         results = interpret_func(
-            [message_cache_pop(item, message_cache) for item in elem],
+            [cache_pop_func(item, message_cache) for item in elem],
             live_orders_cache,
             event_sequence
         )

@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from th2_data_services.config import options
 from datetime import datetime
 from recon_lw.core.message_utils import message_to_dict
@@ -7,6 +9,30 @@ from recon_lw.core.ts_converters import time_stamp_key
 from th2_data_services.data import Data
 from os import listdir
 from os import path
+
+
+@dataclass
+class CachedMessage:
+    message: dict
+    count: int = 1
+
+def message_cache_add_with_copies(m, message_cache):
+    mid = options.mfr.get_id(m)
+    if mid not in message_cache:
+        message_cache[mid] = CachedMessage(m, 1)
+    else:
+        message_cache[mid].count += 1
+
+def message_cache_pop_with_copies(m_id, message_cache):
+    if m_id is None:
+        return None
+    r = message_cache.get(m_id)
+    if not r:
+        return None
+    if r.count == 1:
+        return message_cache.pop(m_id).message
+    r.count -= 1
+    return r.message
 
 def time_index_add(key, m, time_index):
     time_index.add((options.mfr.get_timestamp(m), key))
@@ -32,6 +58,7 @@ def create_event(
         body=None,
         parentId=None,
         recon_name='',
+        attached_message_ids=[]
 ):
     # TODO - description is required.
     ts = datetime.now()
@@ -43,7 +70,7 @@ def create_event(
          "body": body,
          "parentEventId": parentId,
          "startTimestamp": {"epochSecond": int(ts.timestamp()), "nano": ts.microsecond * 1000},
-         "attachedMessageIds": []}
+         "attachedMessageIds": attached_message_ids}
     return e
 
 def simplify_message(m):
