@@ -103,6 +103,7 @@ class BasicErrorCategorizer(IErrorCategorizer):
 
             # TODO:
             #  event['body']['diff'] -- diff here is actually `diffs` - list of diff
+            print('here')
             for diff in event['body']['diff']:
                 category = self.error_extractor_strategy.diff_category_extractor(
                     recon_name, diff, event)
