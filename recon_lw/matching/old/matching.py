@@ -4,7 +4,7 @@ from sortedcontainers import SortedKeyList
 from th2_data_services.config import options
 
 from recon_lw.core.ts_converters import time_stamp_key
-from recon_lw.core.utility import time_index_add, message_cache_add
+from recon_lw.core.utility import time_index_add, message_cache_add, message_cache_add_with_copies
 from recon_lw.matching.old.utils import rule_flush
 
 
@@ -29,7 +29,8 @@ def flush_matcher(ts, rule_settings, event_sequence: dict, save_events_func):
                event_sequence,
                save_events_func,
                rule_settings["rule_root_event"],
-               rule_settings["live_orders_cache"] if "live_orders_cache" in rule_settings else None)
+               rule_settings["live_orders_cache"] if "live_orders_cache" in rule_settings else None,
+               keep_copies_for_same_m_id=rule_settings.get('keep_copies_for_same_m_id', False))
 
 def one_many_match(next_batch, rule_dict):
     """
@@ -56,6 +57,12 @@ def one_many_match(next_batch, rule_dict):
     message_cache = rule_dict["message_cache"]
     first_key_func = rule_dict["first_key_func"]
     second_key_func = rule_dict["second_key_func"]
+    trace_duplicate_messages = rule_dict.get('trace_duplicate_messages', True)
+    keep_copies_for_same_m_id = rule_dict.get('keep_copies_for_same_m_id', False)
+
+    message_cache_add_func = message_cache_add
+    if keep_copies_for_same_m_id:
+        message_cache_add_func = message_cache_add_with_copies
 
     n_duplicates = 0
     for m in next_batch:
@@ -64,10 +71,12 @@ def one_many_match(next_batch, rule_dict):
         if first_keys is not None:
             match_index_element = [message_id, None]
             for first_key in first_keys:
+                if keep_copies_for_same_m_id:
+                    match_index_element = [message_id, None]
                 if first_key not in match_index:
                     match_index[first_key] = match_index_element
                     time_index_add(first_key, m, time_index)
-                    message_cache_add(m, message_cache)
+                    message_cache_add_func(m, message_cache)
                     continue
                 else:
                     existing = match_index[first_key]
@@ -75,25 +84,25 @@ def one_many_match(next_batch, rule_dict):
                         n_duplicates += 1
                     else:
                         existing[0] = message_id
-                        message_cache_add(m, message_cache)
+                        message_cache_add_func(m, message_cache)
                         continue
         second_key = second_key_func(m)
         if second_key is not None:
             if second_key not in match_index:
                 match_index[second_key] = [None, message_id]
                 time_index_add(second_key, m, time_index)
-                message_cache_add(m, message_cache)
+                message_cache_add_func(m, message_cache)
             else:
                 existing = match_index[second_key]
                 if existing[1] is None:  # existing[1] - stream 2 message ID
                     existing[1] = message_id
                     # match_index[second_key] = [existing[0], message_id]
-                    message_cache_add(m, message_cache)
+                    message_cache_add_func(m, message_cache)
                 else:
                     existing.append(message_id)
-                    message_cache_add(m, message_cache)
+                    message_cache_add_func(m, message_cache)
 
-    if n_duplicates > 0:
+    if n_duplicates > 0 and trace_duplicate_messages:
         print(n_duplicates, " duplicates detected")
 
 def pair_one_match(next_batch, rule_dict):
