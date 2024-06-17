@@ -171,7 +171,11 @@ def compare_full_vs_top(full_book: dict, top_book: dict):
 def ob_compare_get_timestamp_key1_key2_aggr(o, custom_settings):
     if o["body"]["aggr_seq"]["limit_delta"] not in [1, 2]:
         return None, None, None
+        
     if o["body"]["sessionId"] == custom_settings["full_session"]:
+        if 'level_limit' in custom_settings:
+            if o["body"]["aggr_seq"]["l"] > custom_settings['level_limit']:
+                return None, None, None
         return o["body"]["timestamp"], "{0}_{1}_{2}".format(o["body"]["book_id"],
                                                             o["body"]["time_of_event"],
                                                             o["body"]["aggr_seq"]["limit_v2"]), None
@@ -219,6 +223,7 @@ def ob_compare_get_timestamp_key1_key2_top_aggr(o, custom_settings):
 
 
 def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_events):
+    streams = f'{custom_settings["comp_session"]}:{custom_settings["full_session"]}'
     if match[0] is not None and match[1] is not None:
         comp_res = compare_full_vs_aggr(match[0]["body"], match[1]["body"])
         events_to_store = []
@@ -232,7 +237,10 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                  "book_id": match[0]["body"]["book_id"],
                  "time_of_event": match[0]["body"]["time_of_event"],
                  "limit_v2": match[0]["body"]["aggr_seq"]["limit_v2"],
-                 "errors": comp_res}))
+                 "errors": comp_res,
+                 "streams": streams,
+                 "full_meta" : match[0]["body"].get("meta"),
+                 "aggr_meta" : match[1]["body"].get("meta")}))
         else:
             events_to_store.append(create_event(
                 "23:match",
@@ -244,7 +252,10 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
                  "aggr_book_scope": match[1]["scope"],
                  "book_id": match[0]["body"]["book_id"],
                  "time_of_event": match[0]["body"]["time_of_event"],
-                 "top_v2": match[0]["body"]["aggr_seq"]["top_v2"]}))
+                 "limit_v2": match[0]["body"]["aggr_seq"]["limit_v2"],
+                 "streams": streams,
+                 "full_meta" : match[0]["body"].get("meta"),
+                 "aggr_meta" : match[1]["body"].get("meta")}))
         save_events(events_to_store)
     elif match[0] is not None:
         tech_info = ob_compare_get_timestamp_key1_key2_aggr(match[0], custom_settings)
@@ -256,7 +267,9 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
              "book_id": match[0]["body"]["book_id"],
              "time_of_event": match[0]["body"]["time_of_event"],
              "limit_v2": match[0]["body"]["aggr_seq"]["limit_v2"],
+             "streams": streams,
              "sessionId": match[0]["body"]["sessionId"],
+             "full_meta" : match[0]["body"].get("meta"),
              "tech_info": tech_info})
         save_events([error_event])
     elif match[1] is not None:
@@ -269,6 +282,8 @@ def ob_compare_interpret_match_aggr(match, custom_settings, create_event, save_e
              "book_id": match[1]["body"]["book_id"],
              "time_of_event": match[1]["body"]["time_of_event"],
              "limit_v2": match[1]["body"]["aggr_seq"]["limit_v2"],
+             "streams": streams,
+             "aggr_meta" : match[1]["body"].get("meta"),
              "sessionId": match[1]["body"]["sessionId"]})
         save_events([error_event])
 
@@ -412,11 +427,14 @@ def ob_compare_streams(source_events_path: pathlib.PosixPath, results_path: path
         full_session = rule_params["full_session"]
         if "aggr_session" in rule_params:
             aggr_session = rule_params["aggr_session"]
+            custom_settings = {"full_session": full_session, "comp_session": aggr_session}
+            if 'level_limit' in rule_params:
+                custom_settings['level_limit'] = rule_params['level_limit']
             processor_aggr = TimeCacheMatcher(
                 rule_params["horizon_delay"],
                 ob_compare_get_timestamp_key1_key2_aggr,
                 ob_compare_interpret_match_aggr,
-                {"full_session": full_session, "comp_session": aggr_session},
+                custom_settings,
                 lambda name, ev_type, ok, body: events_saver.create_event(
                     name, ev_type, ok, body, parentId=rule_root_event["eventId"]),
                 lambda ev_batch: events_saver.save_events(ev_batch)

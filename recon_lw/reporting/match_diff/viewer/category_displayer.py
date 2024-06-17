@@ -150,9 +150,14 @@ class ErrorExampleDisplayer:
         if isinstance(example_data.message_content, list):
             code_mc = ''
             for mc in example_data.message_content:
-                code_mc += f'<div><code id="code">{json.dumps(mc, indent=4)}</code></div>'
-        else:
+                if isinstance(mc, dict):
+                    code_mc += f'<div><code id="code">{json.dumps(mc, indent=4)}</code></div>'
+                else:
+                    code_mc += f'<div><code id="code">{mc}</code></div>'
+        elif isinstance(example_data.message_content, dict):
             code_mc = f'<code id="code">{json.dumps(example_data.message_content, indent=4)}</code>'
+        else:
+            code_mc = f'<code id="code">{example_data.message_content}</code>'
 
         return f'''
         <td style="text-align: left; vertical-align: top">

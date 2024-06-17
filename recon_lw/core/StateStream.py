@@ -19,7 +19,8 @@ class StateStream:
                  state_transition_func,
                  events_saver: IEventsSaver,
                  combine_instantenious_snapshots=True,
-                 get_next_update_func2=None
+                 get_next_update_func2 = None,
+                 initial_snapshots_func = None
                  ) -> None:
         """
 
@@ -43,8 +44,13 @@ class StateStream:
         self._combine_instantenious_snapshots = combine_instantenious_snapshots
         self._events_saver = events_saver
         self._get_next_update_func2 = get_next_update_func2
+        self._initial_snapshots_func = initial_snapshots_func
 
     def state_updates(self, stream: Iterable, snapshots_collection):
+        if self._initial_snapshots_func is not None:
+            for key, ts, state in self._initial_snapshots_func():
+                yield (key, ts, 'c', state)
+
         if self._get_next_update_func2 is None:
             for o in stream:
                 key, ts, action, state = self._get_next_update_func(o)
