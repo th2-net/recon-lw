@@ -1,9 +1,11 @@
 import json
 from itertools import chain
 from typing import List, Dict, Optional
-
-from IPython.core.display import HTML, Markdown
-from IPython.core.display_functions import display
+try:
+    from IPython.core.display import HTML, Markdown
+    from IPython.core.display_functions import display
+except ImportError:
+    pass
 from th2_data_services.data import Data
 
 from recon_lw.core.type.types import Message
@@ -44,6 +46,9 @@ class ErrorExampleDisplayer:
         """Applies CSS styles for HTML in Jupyter."""
         display(HTML(self.error_examples_styles_provider()))
 
+    def get_styles(self):
+        return self.error_examples_styles_provider()
+
     def display_category(
             self,
             example_content: CategoryTableView
@@ -58,7 +63,6 @@ class ErrorExampleDisplayer:
 
 
         Args:
-            category:
             example_content:
 
         Returns:
@@ -81,6 +85,16 @@ class ErrorExampleDisplayer:
         )
         self._uid += 1
         display(HTML(data))
+
+    def get_category_example_html(self,
+                                  example_content: CategoryTableView):
+        data = self._get_example_comparison_table(
+            example_content.event_category,
+            example_content,
+            self._uid
+        )
+        self._uid += 1
+        return data
 
     def _get_example_comparison_table(
             self,
@@ -215,13 +229,6 @@ class MatchDiffViewer:
                 reconciliation. It will search messages by IDs from this object.
             data_objects: List of Data objects that were used during
                 reconciliation.
-            message_business_ids_provider: The function that returns a list
-                of matching-keys.
-                That should be a function that
-                    - takes: a message (usually real exchange message in dict
-                        format).
-                    - returns: a list of matching-keys
-                        e.g. ['key-field1-val:key-field2-val']
             message_content_provider:
                 Function or `IExampleContentProvider` class that provides
                 CategoryTableView
@@ -329,3 +336,78 @@ class MatchDiffViewer:
                     event_category=category)
 
                 self.error_example_displayer.display_category(grouped_table_view)
+
+    def as_html(self, out_categories_limit: Optional[int] = 5000, fp=None):
+        """
+
+        Args:
+            out_categories_limit: If provided, will be shown only this number
+                of category examples. Use '-1' to have unlimited number of
+                examples.
+            fp: file pointer, where html/styles must be saved
+        Returns:
+
+        """
+        if out_categories_limit == -1:
+            out_categories_limit = 999999999999999999
+        categories_shown = 0
+
+        affected_recons = self.context.error_examples.get_affected_recons()
+
+        if not affected_recons:
+            print('Warning: there are no any `affected_recons`. \n'
+                  'That means that there are 0 element in the `ErrorExamples`. \n'
+                  'It can happen because:\n'
+                  '\t1. Your events have eventType that not matches with default types.\n'
+                  "\t2. Your `ErrorCategoryStrategy.diff_category_extractor` haven't return `EventCategory`.")
+
+        styles = self.error_example_displayer.get_styles()
+
+        # fp.write(f'<style type="text/css">\n{styles}</styles>\n')
+        fp.write(styles)
+
+        for recon_name in affected_recons:
+            self._write_header(3, f"{recon_name}", fp)
+            self._write_header(4,
+                               f"{recon_name} full matches = {self.context.matches_stats.match_number(recon_name)}",
+                               fp)
+            self._write_header(4, f"{recon_name} fields with problems", fp)
+            self._write_header(4, f"{self.context.problem_fields.get_table(recon_name)}", fp)
+            self._write_header(4, f"{recon_name} matches with diffs", fp)
+
+            for category, err_examples_ids in self.context.error_examples.get_examples(recon_name).items():
+                if categories_shown >= out_categories_limit:
+                    print(f"WARNING: out_categories_limit reached for recon {recon_name}. \n"
+                          " - in most of the cases, if you have too many examples, you have bad categories.\n"
+                          " - Use '-1' to have unlimited number of examples.")
+                    break
+                categories_shown += 1
+
+                rows = []
+
+                for err_ex_msg_ids in err_examples_ids:
+                    # TODO
+                    #   1. It's strange that we don't provide the result recon event
+                    #       to this function.
+                    #   2. Cache should be moved outside, I think.
+                    table_view = self.content_provider.get_example_content(
+                        err_ex_msg_ids=err_ex_msg_ids,
+                        context=self.context,
+                        msgs_cache=self._get_cache(),
+                        category=category)
+                    rows.extend(table_view.rows)
+
+                grouped_table_view = CategoryTableView(
+                    rows=rows,
+                    event_category=category)
+
+                fp.write(self.error_example_displayer.get_category_example_html(grouped_table_view))
+                fp.write('\n')
+
+    def _write_header(self, header_size: int, text, fp):
+        """
+        Args:
+            header_size (int): is the the size of the header which will ( 1-6 )
+        """
+        h = f"h{header_size}"
+        fp.write(f"<{h}>{text}</{h}>\n")
