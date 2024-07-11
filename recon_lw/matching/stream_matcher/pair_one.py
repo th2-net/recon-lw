@@ -4,6 +4,7 @@ from typing import Optional, List, Dict
 from recon_lw.core.utility.recon_utils import time_index_add, message_cache_add
 from th2_data_services.config import options
 
+
 class PairOneMatcher(ReconMatcher):
 
     def __init__(self, rule: PairOneRule):

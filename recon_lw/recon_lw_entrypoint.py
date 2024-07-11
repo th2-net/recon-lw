@@ -14,9 +14,12 @@ def execute_standalone(
         message_pickle_path,
         sessions_list,
         result_events_path,
-        rules: Dict[str, Dict[str, Union[Dict[str, Any], AbstractRule]]],
-        data_objects=None,
-        buffer_len=100,
+        rules: Dict[str, Union[Dict[str, Any], AbstractRule]],
+        # TODO - data_objects
+        #   data_objects is a wrong name.
+        #   Actually here can be any Iterable object
+        data_objects: Optional[list[Iterable]] = None,
+        buffer_len = 100,
         events_saver: Optional[IEventsSaver] = None,
 ):
     """Entrypoint for recon-lw.
@@ -39,7 +42,7 @@ def execute_standalone(
         sessions_list:
         result_events_path:
         rules_settings_dict: { ReconRuleName: {}, ... }
-        data_objects:
+        data_objects: Actually here can be any Iterable object
 
     Returns:
 
@@ -53,6 +56,10 @@ def execute_standalone(
 
     events_saver.save_events([root_event])
     new_rules_settings_dict = {}
+
+    # TODO
+    #   It's better to convert DICT rules to AbstractRule objects and
+    #   use them everywhere in the code instead of checking the type every time.
     for rule_key, rule_settings in rules.items():
         if isinstance(rule_settings, dict):
             new_rules_settings_dict[rule_key] = preprocess_rule_config_dict(

@@ -1,12 +1,13 @@
 from sortedcontainers import SortedKeyList
 
+from recon_lw.core.stream import Streams
 from recon_lw.core.ts_converters import time_stamp_key
 
 
 class SequenceCache:
     def __init__(self, horizon_delay_seconds):
         self._sequence = SortedKeyList(key=lambda item: item[0])
-        self._times = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
+        self._times = Streams()
         self._duplicates = []#= SortedKeyList(key=lambda item: item[0])
         self._horizon_delay_seconds = horizon_delay_seconds
         self._debug = False
