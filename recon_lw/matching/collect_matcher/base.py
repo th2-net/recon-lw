@@ -22,6 +22,7 @@ class CollectMatcher(ABC):
     def collect_matches(self, batch: List[Optional[Dict]], rule: AbstractRule):
         pass
 
+
 class CollectMatcherProtocol(Protocol):
     def __call__(self, batch: List[Message], state: dict):
         pass

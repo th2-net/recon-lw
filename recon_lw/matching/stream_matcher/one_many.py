@@ -7,11 +7,25 @@ from recon_lw.core.utility.recon_utils import time_index_add, message_cache_add
 
 
 class OneManyMatcher(ReconMatcher):
+    """
+    New analog for recon_lw/matching/old/matching.py - one_many_match
+
+    """
+
+    # FIXME:
+    #   There was added mew functionality to `recon_lw/matching/old/matching.py - one_many_match`
+    #    - trace_duplicate_messages & keep_copies_for_same_m_id
+    #   but not to the current class.
+    #
+    # FIXME:
+    #   Probably we are able to don't have 2 almost the same peace of logic and
+    #   reuse one in another.
 
     def match(self, next_batch: List[Optional[Dict]], rule: OneManyRuleConfig):
         context = rule.matcher_context
         if not isinstance(context, SimpleMatcherContext):
-            raise ValueError(f'Expected matcher_context type is SimpleMatcherContext or its extension.\
+            raise ValueError(
+                f'Expected matcher_context type is SimpleMatcherContext or its extension.\
              Actual type is {type(rule.matcher_context)}')
         match_index = context.match_index
         time_index = context.time_index

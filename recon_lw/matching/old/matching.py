@@ -3,6 +3,7 @@ from typing import Any
 from sortedcontainers import SortedKeyList
 from th2_data_services.config import options
 
+from recon_lw.core.stream import Streams
 from recon_lw.core.ts_converters import time_stamp_key
 from recon_lw.core.utility import time_index_add, message_cache_add, message_cache_add_with_copies
 from recon_lw.matching.old.utils import rule_flush
@@ -10,7 +11,7 @@ from recon_lw.matching.old.utils import rule_flush
 
 def init_matcher(rule_settings):
     rule_settings["match_index"] = {}
-    rule_settings["time_index"] = SortedKeyList(key=lambda t: time_stamp_key(t[0]))
+    rule_settings["time_index"] = Streams()
     rule_settings["message_cache"] = {}
 
 def collect_matcher(batch, rule_settings):
@@ -31,6 +32,7 @@ def flush_matcher(ts, rule_settings, event_sequence: dict, save_events_func):
                rule_settings["rule_root_event"],
                rule_settings["live_orders_cache"] if "live_orders_cache" in rule_settings else None,
                keep_copies_for_same_m_id=rule_settings.get('keep_copies_for_same_m_id', False))
+
 
 def one_many_match(next_batch, rule_dict):
     """

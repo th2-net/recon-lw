@@ -11,7 +11,7 @@ class DefaultCollectMatcher(CollectMatcher):
 
     def __init__(self,
                  match_function: Union[ReconMatcher, Callable],
-                 last_state_matcher: Optional[LastStateMatcher]=None,
+                 last_state_matcher: Optional[LastStateMatcher] = None,
                  ):
         self.last_state_matcher = last_state_matcher
         self.match_function = match_function

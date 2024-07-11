@@ -1,4 +1,6 @@
 from sortedcontainers import SortedKeyList
+
+from recon_lw.core.stream import Streams
 from recon_lw.matching.init_function.base import MatcherContextProvider
 
 from recon_lw.core.ts_converters import time_stamp_key
@@ -11,8 +13,9 @@ class DefaultMatcherContextProvider(MatcherContextProvider):
         super().__init__()
         self.context = SimpleMatcherContext(
             match_index={},
-            time_index=SortedKeyList(key=lambda t: time_stamp_key(t[0])),
+            time_index=Streams(),
             message_cache={}
         )
+
     def get_context(self) -> SimpleMatcherContext:
         return self.context

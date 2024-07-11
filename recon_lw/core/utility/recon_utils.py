@@ -208,7 +208,10 @@ def open_streams(
         streams_path: Optional[str],
         name_filter=None,
         expanded_messages: bool = False,
-        data_objects: List[Data] = None
+        # TODO - data_objects
+        #   data_objects is a wrong name.
+        #   Actually here can be any Iterable object
+        data_objects: Optional[list[Iterable]] = None
 ) -> Streams:
     """
     Get Streams object for Th2 messages.
@@ -217,7 +220,9 @@ def open_streams(
         streams_path:
         name_filter:
         expanded_messages:
-        data_objects:
+        data_objects: Actually here can be any Iterable object.
+            NOTE:
+                Every iterable object should be sorted!
 
     Returns:
         Streams: [(Th2ProtobufTimestamp,

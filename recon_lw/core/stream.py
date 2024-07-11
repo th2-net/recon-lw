@@ -109,6 +109,8 @@ class Streams(SortedKeyList):
     def add_stream(self, iter_obj: Iterable):
         """Adds Iterable object to streams.
 
+        It's expected that `iter_obj` is SORTED!
+
         Note:
             Data object from th2-data-services is Iterable.
         """

@@ -37,7 +37,8 @@ class DefaultFlushFunction(FlushFunction):
         )
 
     @staticmethod
-    def rule_flush(current_ts, horizon_delay, match_index: dict, time_index, message_cache,
+    def rule_flush(current_ts, horizon_delay, match_index: dict,
+                   time_index: Streams, message_cache: dict,
                    interpret_func, event_sequence: dict, send_events_func,
                    parent_event, live_orders_cache):
 
