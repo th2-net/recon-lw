@@ -4,15 +4,15 @@ import traceback
 from pathlib import Path
 
 
-def import_plugins():
-    root = Path('../recon_lw').resolve()
+def test_import_plugins():
+    root = Path("../recon_lw").resolve()
     stack = [root]
     while stack:
         current = stack.pop()
         for _, name, ispkg in pkgutil.iter_modules([str(current)]):
-            relative = str(current.relative_to(root)).replace('\\', '.')
-            if relative != '.':
-                relative = f'.{relative}.'
+            relative = str(current.relative_to(root)).replace("\\", ".")
+            if relative != ".":
+                relative = f".{relative}."
             if ispkg:
                 stack.append(current / name)
                 try:
@@ -24,7 +24,3 @@ def import_plugins():
                     importlib.import_module(f"recon_lw{relative}{name}")
                 except ImportError:
                     print(traceback.format_exc())
-
-
-if __name__ == "__main__":
-    import_plugins()
