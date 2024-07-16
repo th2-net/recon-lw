@@ -26,4 +26,5 @@ def import_plugins():
                     print(traceback.format_exc())
 
 
-import_plugins()
+if __name__ == "__main__":
+    import_plugins()
