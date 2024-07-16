@@ -1,10 +1,12 @@
 from recon_lw.matching.LastStateMatcher import LastStateMatcher
-from typing import List, Optional, Dict, Union
-from recon_lw.core.rule.base import AbstractRule
+from typing import List, Optional, Dict, Union, TYPE_CHECKING
 from typing import Callable
 
 from recon_lw.matching.stream_matcher import ReconMatcher
 from recon_lw.matching.collect_matcher.base import CollectMatcher
+
+if TYPE_CHECKING:
+    from recon_lw.core.rule.base import AbstractRule
 
 
 class DefaultCollectMatcher(CollectMatcher):
@@ -16,7 +18,7 @@ class DefaultCollectMatcher(CollectMatcher):
         self.last_state_matcher = last_state_matcher
         self.match_function = match_function
 
-    def collect_matches(self, batch: List[Optional[Dict]], rule: AbstractRule):
+    def collect_matches(self, batch: List[Optional[Dict]], rule: 'AbstractRule'):
         match_func = self.match_function
 
         if isinstance(match_func, Callable):

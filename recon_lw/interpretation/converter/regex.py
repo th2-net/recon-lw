@@ -1,4 +1,4 @@
-from base import Converter
+from .base import Converter
 import re
 from typing import Pattern, Any
 

@@ -1,6 +1,6 @@
 from typing import Optional, Dict
 
-from base import Extractor
+from .base import Extractor
 from recon_lw.interpretation.adapter import Adapter
 from recon_lw.core.type.types import Message
 

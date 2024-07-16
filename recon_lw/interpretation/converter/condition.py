@@ -1,7 +1,7 @@
-from base import Converter, ConverterProtocol
+from .base import Converter, ConverterProtocol
 from recon_lw.interpretation.adapter import Adapter
 from recon_lw.interpretation.condition import Condition
-from dummy import DummyConverter
+from .dummy import DummyConverter
 from recon_lw.core.type.types import Message
 
 

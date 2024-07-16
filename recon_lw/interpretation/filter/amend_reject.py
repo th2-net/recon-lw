@@ -1,4 +1,4 @@
-from base import Filter
+from .base import Filter
 from typing import Set
 
 from recon_lw.interpretation.adapter import Adapter

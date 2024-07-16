@@ -1,4 +1,4 @@
-from base import Converter
+from .base import Converter
 from typing import Dict
 
 from recon_lw.interpretation.adapter import Adapter
