@@ -1,6 +1,6 @@
 sortedcontainers
 th2-data-services-lwdp>=2.1  # We cannot set exact version because it can be as 2 and as 3.
-th2-data-services~=2.0.0.dev8969866469
+th2-data-services~=2.0.0.dev9969341505
 
 # For viewers required. Install separatelly if required.
 # TODO - make it as dependency feature e.g. `install recon-lw[reporting]`

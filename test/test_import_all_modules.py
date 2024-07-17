@@ -19,8 +19,10 @@ def test_import_plugins():
                     importlib.import_module(f"recon_lw{relative}{'__init__'}")
                 except ImportError:
                     print(traceback.format_exc())
+                    raise
             else:
                 try:
                     importlib.import_module(f"recon_lw{relative}{name}")
                 except ImportError:
                     print(traceback.format_exc())
+                    raise
