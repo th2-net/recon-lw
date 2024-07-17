@@ -1,12 +1,17 @@
-from base import Converter, ConverterProtocol
+from .base import Converter, ConverterProtocol
 from recon_lw.interpretation.adapter import Adapter
 from recon_lw.interpretation.condition import Condition
-from dummy import DummyConverter
+from .dummy import DummyConverter
 from recon_lw.core.type.types import Message
 
 
 class ConditionConverter(Converter):
-    def __init__(self, condition: Condition, true_converter: ConverterProtocol=None, false_converter: ConverterProtocol = None):
+    def __init__(
+        self,
+        condition: Condition,
+        true_converter: ConverterProtocol = None,
+        false_converter: ConverterProtocol = None,
+    ):
         self.condition = condition
         if true_converter is None:
             true_converter = DummyConverter()

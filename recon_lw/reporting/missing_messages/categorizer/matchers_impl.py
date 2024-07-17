@@ -9,22 +9,24 @@ class SimpleMatcher(MissMatcher):
         self.conditions = kwargs
 
     def __call__(self, event):
-        values = event['body'][self.field]
+        values = event["body"][self.field]
         for key, value in self.conditions.items():
             if values.get(key) != value:
                 return False
         return True
+
 
 class SimpleMatcherFlat(MissMatcher):
     def __init__(self, **kwargs: Dict):
         self.conditions = kwargs
 
     def __call__(self, event):
-        values = event['body']
+        values = event["body"]
         for key, value in self.conditions.items():
             if values.get(key) != value:
                 return False
         return True
+
 
 class MessageMatcherFlat(MissMatcher):
     def __init__(self, **kwargs: Dict):

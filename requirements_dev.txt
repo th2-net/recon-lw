@@ -1,0 +1,7 @@
+autoflake
+black
+pre-commit
+pydocstyle
+pytest
+pytest-mock
+pytest-xdist

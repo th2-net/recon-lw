@@ -17,6 +17,7 @@ class ReconEventDiff:
     def to_dict(self):
         return asdict(self)
 
+
 # class ReconEventDiff:
 #     def __init__(self, field, expected, actual):
 #

@@ -20,6 +20,7 @@ class IFieldCheckRule(ABC):
     def handler(self, field, msg1, msg2) -> FieldCheckResult:
         pass
 
+
 class IFieldCheckRuleProtocol(Protocol):
     def __call__(self, field, msg1, msg2):
         pass
@@ -39,6 +40,7 @@ class FieldToCheck:
        field_description (str): A description of the field (optional).
 
     """
+
     field: str
     field_checker: IFieldCheckRule
-    field_description: str = ''
+    field_description: str = ""

@@ -1,10 +1,8 @@
 from typing import Any
 
-from sortedcontainers import SortedKeyList
 from th2_data_services.config import options
 
 from recon_lw.core.stream import Streams
-from recon_lw.core.ts_converters import time_stamp_key
 from recon_lw.core.utility import time_index_add, message_cache_add, message_cache_add_with_copies
 from recon_lw.matching.old.utils import rule_flush
 
@@ -14,24 +12,28 @@ def init_matcher(rule_settings):
     rule_settings["time_index"] = Streams()
     rule_settings["message_cache"] = {}
 
+
 def collect_matcher(batch, rule_settings):
     rule_match_func = rule_settings["rule_match_func"]
     rule_match_func(batch, rule_settings)
     if "live_orders_cache" in rule_settings:
         rule_settings["live_orders_cache"].process_objects_batch(batch)
 
+
 def flush_matcher(ts, rule_settings, event_sequence: dict, save_events_func):
-    rule_flush(ts,
-               rule_settings["horizon_delay"],
-               rule_settings["match_index"],
-               rule_settings["time_index"],
-               rule_settings["message_cache"],
-               rule_settings["interpret_func"],
-               event_sequence,
-               save_events_func,
-               rule_settings["rule_root_event"],
-               rule_settings["live_orders_cache"] if "live_orders_cache" in rule_settings else None,
-               keep_copies_for_same_m_id=rule_settings.get('keep_copies_for_same_m_id', False))
+    rule_flush(
+        ts,
+        rule_settings["horizon_delay"],
+        rule_settings["match_index"],
+        rule_settings["time_index"],
+        rule_settings["message_cache"],
+        rule_settings["interpret_func"],
+        event_sequence,
+        save_events_func,
+        rule_settings["rule_root_event"],
+        rule_settings["live_orders_cache"] if "live_orders_cache" in rule_settings else None,
+        keep_copies_for_same_m_id=rule_settings.get("keep_copies_for_same_m_id", False),
+    )
 
 
 def one_many_match(next_batch, rule_dict):
@@ -59,8 +61,8 @@ def one_many_match(next_batch, rule_dict):
     message_cache = rule_dict["message_cache"]
     first_key_func = rule_dict["first_key_func"]
     second_key_func = rule_dict["second_key_func"]
-    trace_duplicate_messages = rule_dict.get('trace_duplicate_messages', True)
-    keep_copies_for_same_m_id = rule_dict.get('keep_copies_for_same_m_id', False)
+    trace_duplicate_messages = rule_dict.get("trace_duplicate_messages", True)
+    keep_copies_for_same_m_id = rule_dict.get("keep_copies_for_same_m_id", False)
 
     message_cache_add_func = message_cache_add
     if keep_copies_for_same_m_id:
@@ -106,6 +108,7 @@ def one_many_match(next_batch, rule_dict):
 
     if n_duplicates > 0 and trace_duplicate_messages:
         print(n_duplicates, " duplicates detected")
+
 
 def pair_one_match(next_batch, rule_dict):
     # first_key_func takes m  returns string(key)

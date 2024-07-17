@@ -1,6 +1,7 @@
 import json
 from itertools import chain
 from typing import List, Dict, Optional
+
 try:
     from IPython.core.display import HTML, Markdown
     from IPython.core.display_functions import display
@@ -9,26 +10,27 @@ except ImportError:
 from th2_data_services.data import Data
 
 from recon_lw.core.type.types import Message
-from recon_lw.reporting.match_diff.viewer.types.category_table_view import CategoryTableView, \
-    MatchDiffExampleData
+from recon_lw.reporting.match_diff.viewer.types.category_table_view import (
+    CategoryTableView,
+    MatchDiffExampleData,
+)
 from recon_lw.reporting.match_diff.categorizer import EventCategory
 from recon_lw.reporting.match_diff.categorizer.types.context import ReconErrorStatsContext
-from recon_lw.reporting.match_diff.viewer.color_provider.base import \
-    ICategoryColorProviderProtocol
+from recon_lw.reporting.match_diff.viewer.color_provider.base import ICategoryColorProviderProtocol
 from recon_lw.reporting.match_diff.viewer.content_provider.base import IExampleContentProvider
-from recon_lw.reporting.match_diff.viewer.style_provider.base import \
-    ErrorExamplesStyleProviderProtocol
+from recon_lw.reporting.match_diff.viewer.style_provider.base import (
+    ErrorExamplesStyleProviderProtocol,
+)
 from recon_lw.reporting.recon_context.context import ReconContext
 
 MessageId = str
 
 
-
 class ErrorExampleDisplayer:
     def __init__(
-            self,
-            category_color_provider: ICategoryColorProviderProtocol,
-            error_examples_styles_provider: ErrorExamplesStyleProviderProtocol
+        self,
+        category_color_provider: ICategoryColorProviderProtocol,
+        error_examples_styles_provider: ErrorExamplesStyleProviderProtocol,
     ):
         """Displays error examples collected by error categorizer
         (e.g. BasicErrorCategoriser) with default styles.
@@ -49,10 +51,7 @@ class ErrorExampleDisplayer:
     def get_styles(self):
         return self.error_examples_styles_provider()
 
-    def display_category(
-            self,
-            example_content: CategoryTableView
-    ) -> None:
+    def display_category(self, example_content: CategoryTableView) -> None:
         """Draws in HTML something like this:
 
         -----------------------                 {
@@ -79,28 +78,20 @@ class ErrorExampleDisplayer:
 
         """
         data = self._get_example_comparison_table(
-            example_content.event_category,
-            example_content,
-            self._uid
+            example_content.event_category, example_content, self._uid
         )
         self._uid += 1
         display(HTML(data))
 
-    def get_category_example_html(self,
-                                  example_content: CategoryTableView):
+    def get_category_example_html(self, example_content: CategoryTableView):
         data = self._get_example_comparison_table(
-            example_content.event_category,
-            example_content,
-            self._uid
+            example_content.event_category, example_content, self._uid
         )
         self._uid += 1
         return data
 
     def _get_example_comparison_table(
-            self,
-            category: EventCategory,
-            table_view: CategoryTableView,
-            uid: int
+        self, category: EventCategory, table_view: CategoryTableView, uid: int
     ):
         """
 
@@ -117,11 +108,11 @@ class ErrorExampleDisplayer:
         category_color = self.category_color_provider(category)
         category_style = f"background-color: {category_color}"
 
-        content_header = f'''
+        content_header = f"""
           <tr>
             <td style="text-align: left;{category_style}" colspan=2><b style="font-size: 15px;">{category}</b></td>
           </tr>
-        '''
+        """
 
         content_footer = f"""
         </table>
@@ -132,21 +123,26 @@ class ErrorExampleDisplayer:
                 *[
                     self._get_example_td(
                         example_data=match_diff_example_data,
-                        item_id=f"collapsable-{uid}-{row_idx}.{cell_idx}"
+                        item_id=f"collapsable-{uid}-{row_idx}.{cell_idx}",
                     )
-                    for cell_idx, match_diff_example_data in
-                    enumerate(column_examples_within_row.columns, start=1)
+                    for cell_idx, match_diff_example_data in enumerate(
+                        column_examples_within_row.columns, start=1
+                    )
                 ]
             )
-            for row_idx, column_examples_within_row in
-            enumerate(table_view.rows, start=1)
+            for row_idx, column_examples_within_row in enumerate(table_view.rows, start=1)
         )
 
-        return "\n".join(chain(
-            ('<table border="0" width="100%">',
-             content_header,),
-            items,
-            (content_footer,)))
+        return "\n".join(
+            chain(
+                (
+                    '<table border="0" width="100%">',
+                    content_header,
+                ),
+                items,
+                (content_footer,),
+            )
+        )
 
     @staticmethod
     def _get_example_td(example_data: MatchDiffExampleData, item_id: str):
@@ -162,7 +158,7 @@ class ErrorExampleDisplayer:
 
         """
         if isinstance(example_data.message_content, list):
-            code_mc = ''
+            code_mc = ""
             for mc in example_data.message_content:
                 if isinstance(mc, dict):
                     code_mc += f'<div><code id="code">{json.dumps(mc, indent=4)}</code></div>'
@@ -173,7 +169,7 @@ class ErrorExampleDisplayer:
         else:
             code_mc = f'<code id="code">{example_data.message_content}</code>'
 
-        return f'''
+        return f"""
         <td style="text-align: left; vertical-align: top">
           <div class="wrap-collabsible">
             <input id="{item_id}" class="toggle" type="checkbox">
@@ -185,7 +181,7 @@ class ErrorExampleDisplayer:
             </div>
           </div>
         </td>
-        '''
+        """
 
     @staticmethod
     def _get_example_tr(*td_elements: str):
@@ -199,22 +195,22 @@ class ErrorExampleDisplayer:
         """
         elements = "\n".join(td for td in td_elements)
 
-        return f'''
+        return f"""
         <tr>
           {elements}
         </tr>
-        '''
+        """
 
 
 class MatchDiffViewer:
     def __init__(
-            self,
-            recon_stats_context: ReconErrorStatsContext,
-            messages: Data,
-            data_objects: List[Data],
-            message_content_provider: IExampleContentProvider,
-            recon_context: ReconContext,
-            error_example_displayer: ErrorExampleDisplayer
+        self,
+        recon_stats_context: ReconErrorStatsContext,
+        messages: Data,
+        data_objects: List[Data],
+        message_content_provider: IExampleContentProvider,
+        recon_context: ReconContext,
+        error_example_displayer: ErrorExampleDisplayer,
     ):
         # TODO
         #   1. looks strange that we need 2 almost the same objects
@@ -294,26 +290,36 @@ class MatchDiffViewer:
         affected_recons = self.context.error_examples.get_affected_recons()
 
         if not affected_recons:
-            print('Warning: there are no any `affected_recons`. \n'
-                  'That means that there are 0 element in the `ErrorExamples`. \n'
-                  'It can happen because:\n'
-                  '\t1. Your events have eventType that not matches with default types.\n'
-                  "\t2. Your `ErrorCategoryStrategy.diff_category_extractor` haven't return `EventCategory`.")
+            print(
+                "Warning: there are no any `affected_recons`. \n"
+                "That means that there are 0 element in the `ErrorExamples`. \n"
+                "It can happen because:\n"
+                "\t1. Your events have eventType that not matches with default types.\n"
+                "\t2. Your `ErrorCategoryStrategy.diff_category_extractor` haven't return `EventCategory`."
+            )
 
         for recon_name in affected_recons:
             display(Markdown(f"### {recon_name}"))
-            display(Markdown(f"#### {recon_name} full matches = {self.context.matches_stats.match_number(recon_name)}"))
+            display(
+                Markdown(
+                    f"#### {recon_name} full matches = {self.context.matches_stats.match_number(recon_name)}"
+                )
+            )
             display(Markdown(f"#### {recon_name} fields with problems"))
             display(Markdown(f"#### {self.context.problem_fields.get_table(recon_name)}"))
             display(Markdown(f"#### {recon_name} matches with diffs"))
 
             # group_data_map = get_group_data_map(self.data_objects, 'default')
             self.error_example_displayer.apply_styles()
-            for category, err_examples_ids in self.context.error_examples.get_examples(recon_name).items():
+            for category, err_examples_ids in self.context.error_examples.get_examples(
+                recon_name
+            ).items():
                 if categories_shown >= out_categories_limit:
-                    print("WARNING: out_categories_limit reached. \n"
-                          " - in most of the cases, if you have too many examples, you have bad categories.\n"
-                          " - Use '-1' to have unlimited number of examples.")
+                    print(
+                        "WARNING: out_categories_limit reached. \n"
+                        " - in most of the cases, if you have too many examples, you have bad categories.\n"
+                        " - Use '-1' to have unlimited number of examples."
+                    )
                     return
                 categories_shown += 1
 
@@ -328,12 +334,11 @@ class MatchDiffViewer:
                         err_ex_msg_ids=err_ex_msg_ids,
                         context=self.context,
                         msgs_cache=self._get_cache(),
-                        category=category)
+                        category=category,
+                    )
                     rows.extend(table_view.rows)
 
-                grouped_table_view = CategoryTableView(
-                    rows=rows,
-                    event_category=category)
+                grouped_table_view = CategoryTableView(rows=rows, event_category=category)
 
                 self.error_example_displayer.display_category(grouped_table_view)
 
@@ -355,11 +360,13 @@ class MatchDiffViewer:
         affected_recons = self.context.error_examples.get_affected_recons()
 
         if not affected_recons:
-            print('Warning: there are no any `affected_recons`. \n'
-                  'That means that there are 0 element in the `ErrorExamples`. \n'
-                  'It can happen because:\n'
-                  '\t1. Your events have eventType that not matches with default types.\n'
-                  "\t2. Your `ErrorCategoryStrategy.diff_category_extractor` haven't return `EventCategory`.")
+            print(
+                "Warning: there are no any `affected_recons`. \n"
+                "That means that there are 0 element in the `ErrorExamples`. \n"
+                "It can happen because:\n"
+                "\t1. Your events have eventType that not matches with default types.\n"
+                "\t2. Your `ErrorCategoryStrategy.diff_category_extractor` haven't return `EventCategory`."
+            )
 
         styles = self.error_example_displayer.get_styles()
 
@@ -368,18 +375,24 @@ class MatchDiffViewer:
 
         for recon_name in affected_recons:
             self._write_header(3, f"{recon_name}", fp)
-            self._write_header(4,
-                               f"{recon_name} full matches = {self.context.matches_stats.match_number(recon_name)}",
-                               fp)
+            self._write_header(
+                4,
+                f"{recon_name} full matches = {self.context.matches_stats.match_number(recon_name)}",
+                fp,
+            )
             self._write_header(4, f"{recon_name} fields with problems", fp)
             self._write_header(4, f"{self.context.problem_fields.get_table(recon_name)}", fp)
             self._write_header(4, f"{recon_name} matches with diffs", fp)
 
-            for category, err_examples_ids in self.context.error_examples.get_examples(recon_name).items():
+            for category, err_examples_ids in self.context.error_examples.get_examples(
+                recon_name
+            ).items():
                 if categories_shown >= out_categories_limit:
-                    print(f"WARNING: out_categories_limit reached for recon {recon_name}. \n"
-                          " - in most of the cases, if you have too many examples, you have bad categories.\n"
-                          " - Use '-1' to have unlimited number of examples.")
+                    print(
+                        f"WARNING: out_categories_limit reached for recon {recon_name}. \n"
+                        " - in most of the cases, if you have too many examples, you have bad categories.\n"
+                        " - Use '-1' to have unlimited number of examples."
+                    )
                     break
                 categories_shown += 1
 
@@ -394,15 +407,14 @@ class MatchDiffViewer:
                         err_ex_msg_ids=err_ex_msg_ids,
                         context=self.context,
                         msgs_cache=self._get_cache(),
-                        category=category)
+                        category=category,
+                    )
                     rows.extend(table_view.rows)
 
-                grouped_table_view = CategoryTableView(
-                    rows=rows,
-                    event_category=category)
+                grouped_table_view = CategoryTableView(rows=rows, event_category=category)
 
                 fp.write(self.error_example_displayer.get_category_example_html(grouped_table_view))
-                fp.write('\n')
+                fp.write("\n")
 
     def _write_header(self, header_size: int, text, fp):
         """

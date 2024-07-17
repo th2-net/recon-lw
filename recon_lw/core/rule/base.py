@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from recon_lw.core.EventsSaver import IEventsSaver
-from recon_lw.matching.collect_matcher import CollectMatcher
-from recon_lw.matching.flush_function import FlushFunction
 from recon_lw.matching.init_function import AbstractMatcherContext
 from recon_lw.matching.key_functions import KeyFunction
+
+if TYPE_CHECKING:
+    from recon_lw.matching.collect_matcher import CollectMatcher
+    from recon_lw.matching.flush_function import FlushFunction
 
 
 class RuleContext:
@@ -49,8 +51,8 @@ class AbstractRule(ABC):
                  ):
         self.name: str = None # name
         self.horizon_delay: int = None # horizon_delay
-        self.collect_func: CollectMatcher = None # collect_func  # 'rule_match_func'
-        self.flush_func: FlushFunction = None # flush_func
+        self.collect_func: 'CollectMatcher' = None # collect_func  # 'rule_match_func'
+        self.flush_func: 'FlushFunction' = None # flush_func
         self.matcher_context: Optional[AbstractMatcherContext] = None
         self.first_key_func: KeyFunction = None
         self.second_key_func: KeyFunction = None

@@ -16,12 +16,14 @@ class CachedMessage:
     message: dict
     count: int = 1
 
+
 def message_cache_add_with_copies(m, message_cache):
     mid = options.mfr.get_id(m)
     if mid not in message_cache:
         message_cache[mid] = CachedMessage(m, 1)
     else:
         message_cache[mid].count += 1
+
 
 def message_cache_pop_with_copies(m_id, message_cache):
     if m_id is None:
@@ -34,16 +36,20 @@ def message_cache_pop_with_copies(m_id, message_cache):
     r.count -= 1
     return r.message
 
+
 def time_index_add(key, m, time_index):
     time_index.add((options.mfr.get_timestamp(m), key))
 
+
 def message_cache_add(m, message_cache):
     message_cache[options.mfr.get_id(m)] = m
+
 
 def message_cache_pop(m_id, message_cache):
     if m_id is None:
         return None
     return message_cache.pop(m_id)
+
 
 def create_event_id(event_sequence: dict):
     event_sequence["n"] += 1
@@ -51,27 +57,30 @@ def create_event_id(event_sequence: dict):
 
 
 def create_event(
-        name,
-        type,
-        event_sequence: dict,
-        ok=True,
-        body=None,
-        parentId=None,
-        recon_name='',
-        attached_message_ids=[]
+    name,
+    type,
+    event_sequence: dict,
+    ok=True,
+    body=None,
+    parentId=None,
+    recon_name="",
+    attached_message_ids=[],
 ):
     # TODO - description is required.
     ts = datetime.now()
-    e = {"eventId": create_event_id(event_sequence),
-         "successful": ok,
-         "eventName": name,
-         "eventType": type,
-         "recon_name": recon_name,
-         "body": body,
-         "parentEventId": parentId,
-         "startTimestamp": {"epochSecond": int(ts.timestamp()), "nano": ts.microsecond * 1000},
-         "attachedMessageIds": attached_message_ids}
+    e = {
+        "eventId": create_event_id(event_sequence),
+        "successful": ok,
+        "eventName": name,
+        "eventType": type,
+        "recon_name": recon_name,
+        "body": body,
+        "parentEventId": parentId,
+        "startTimestamp": {"epochSecond": int(ts.timestamp()), "nano": ts.microsecond * 1000},
+        "attachedMessageIds": attached_message_ids,
+    }
     return e
+
 
 def simplify_message(m):
     """Returns a copy of m with changed fields:
@@ -101,6 +110,7 @@ def simplify_message(m):
     mm.pop("bodyBase64")
     return mm
 
+
 def load_to_list(messages: Iterable[dict], simplify: bool) -> List[dict]:
     if simplify:
         return list(map(simplify_message, messages))
@@ -108,8 +118,9 @@ def load_to_list(messages: Iterable[dict], simplify: bool) -> List[dict]:
         return list(messages)
 
 
-def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_list,
-                                     simplify=True):
+def split_messages_pickle_for_recons(
+    message_pickle_path, output_path, sessions_list, simplify=True
+):
     """DEPRECATED FUNCTIONS SINCE WE HAVE DownloadCommand in LwDP data source.
 
     :param message_pickle_path:
@@ -121,7 +132,8 @@ def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_
     messages = Data.from_cache_file(message_pickle_path)
     for s in sessions_list:
         messages_session_in = messages.filter(
-            lambda m: options.mfr.get_session_id(m) == s and options.mfr.get_direction(m) == "IN")
+            lambda m: options.mfr.get_session_id(m) == s and options.mfr.get_direction(m) == "IN"
+        )
         print("Sorting ", s, " IN ", datetime.now())
         arr = load_to_list(messages_session_in, simplify)
         arr.sort(key=lambda m: time_stamp_key(m["timestamp"]))
@@ -131,7 +143,8 @@ def split_messages_pickle_for_recons(message_pickle_path, output_path, sessions_
         messages_session_in_to_save.build_cache(file_name)
 
         messages_session_out = messages.filter(
-            lambda m: options.mfr.get_session_id(m) == s and options.mfr.get_direction(m) == "OUT")
+            lambda m: options.mfr.get_session_id(m) == s and options.mfr.get_direction(m) == "OUT"
+        )
         print("Sorting ", s, " OUT ", datetime.now())
         arr = load_to_list(messages_session_out, simplify)
         arr.sort(key=lambda m: time_stamp_key(m["timestamp"]))
@@ -161,11 +174,7 @@ def protocol(m):
     return "not_defined" if pr is None else pr
 
 
-def open_scoped_events_streams(
-        streams_path,
-        name_filter=None,
-        data_filter=None
-) -> Streams:
+def open_scoped_events_streams(streams_path, name_filter=None, data_filter=None) -> Streams:
     """
     Get Streams object for Th2 events.
 
@@ -189,14 +198,15 @@ def open_scoped_events_streams(
             continue
         if name_filter is not None and not name_filter(f):
             continue
-        scope = f[:f.index("_scope_")]
+        scope = f[: f.index("_scope_")]
         if scope not in scopes_streams_temp:
             scopes_streams_temp[scope] = [Data.from_cache_file(path.join(streams_path, f))]
         else:
             scopes_streams_temp[scope].append(Data.from_cache_file(path.join(streams_path, f)))
 
-    scopes_streams: Dict[str, Data] = {scope: Data(scopes_streams_temp[scope])
-                                       for scope in scopes_streams_temp}
+    scopes_streams: Dict[str, Data] = {
+        scope: Data(scopes_streams_temp[scope]) for scope in scopes_streams_temp
+    }
     for strm in scopes_streams.values():
         if data_filter:
             strm = strm.filter(data_filter)
@@ -205,13 +215,13 @@ def open_scoped_events_streams(
 
 
 def open_streams(
-        streams_path: Optional[str],
-        name_filter=None,
-        expanded_messages: bool = False,
-        # TODO - data_objects
-        #   data_objects is a wrong name.
-        #   Actually here can be any Iterable object
-        data_objects: Optional[list[Iterable]] = None
+    streams_path: Optional[str],
+    name_filter=None,
+    expanded_messages: bool = False,
+    # TODO - data_objects
+    #   data_objects is a wrong name.
+    #   Actually here can be any Iterable object
+    data_objects: Optional[list[Iterable]] = None,
 ) -> Streams:
     """
     Get Streams object for Th2 messages.
@@ -248,8 +258,11 @@ def open_streams(
                 continue
             data_object = Data.from_cache_file(path.join(streams_path, f))
             if expanded_messages:
-                stream = (mm for m in data_object for mm in
-                          options.MESSAGE_FIELDS_RESOLVER.expand_message(m))
+                stream = (
+                    mm
+                    for m in data_object
+                    for mm in options.MESSAGE_FIELDS_RESOLVER.expand_message(m)
+                )
             else:
                 stream = Data.from_cache_file(path.join(streams_path, f))
             streams.add_stream(stream)
@@ -257,10 +270,9 @@ def open_streams(
     return streams
 
 
-def get_next_batch(streams: Streams,
-                   batch: List[Optional[dict]],
-                   batch_len,
-                   get_timestamp_func) -> int:
+def get_next_batch(
+    streams: Streams, batch: List[Optional[dict]], batch_len, get_timestamp_func
+) -> int:
     """
 
     Args:
@@ -276,15 +288,11 @@ def get_next_batch(streams: Streams,
     """
     # DEPRECATED.
     return streams.get_next_batch(
-        batch=batch,
-        batch_len=batch_len,
-        get_timestamp_func=get_timestamp_func
+        batch=batch, batch_len=batch_len, get_timestamp_func=get_timestamp_func
     )
 
 
-def sync_stream(streams: Streams,
-                get_timestamp_func):
+def sync_stream(streams: Streams, get_timestamp_func):
     # DEPRECATED.
     #   Use streams.sync_streams instead.
     yield from streams.sync_streams(get_timestamp_func)
-

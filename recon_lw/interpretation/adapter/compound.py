@@ -4,31 +4,33 @@ from recon_lw.interpretation.adapter.base import Adapter
 from typing import List, Optional, Tuple, Dict, Any
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from recon_lw.interpretation.field_extractor import Extractor
 
 
 class CompoundAdapter(Adapter):
     """
-        A compound adapter composed of multiple adapters with associated conditions.
+    A compound adapter composed of multiple adapters with associated conditions.
 
-        This adapter selects the appropriate adapter based on conditions and delegates
-        message handling to the selected adapter.
+    This adapter selects the appropriate adapter based on conditions and delegates
+    message handling to the selected adapter.
 
-        Attributes:
-            adapters (List[Tuple[Condition, Adapter]]): A list of tuples containing
-                conditions and associated adapters.
-            body_path (Optional[List[str]]): The path to the body field in the message.
-            mapping_path (Optional[List[str]]): The path to the mapping field in the message.
-            mapping (Optional[Dict[str, Extractor]]): A mapping of field names to extractors.
-        """
+    Attributes:
+        adapters (List[Tuple[Condition, Adapter]]): A list of tuples containing
+            conditions and associated adapters.
+        body_path (Optional[List[str]]): The path to the body field in the message.
+        mapping_path (Optional[List[str]]): The path to the mapping field in the message.
+        mapping (Optional[Dict[str, Extractor]]): A mapping of field names to extractors.
+    """
 
-    def __init__(self,
-                 adapters: List[Tuple[Condition, Adapter]],
-                 body_path: Optional[List[str]] = None,
-                 mapping_path: Optional[List[str]] = None,
-                 mapping: Optional[Dict[str, Extractor]]=None
-                 ):
+    def __init__(
+        self,
+        adapters: List[Tuple[Condition, Adapter]],
+        body_path: Optional[List[str]] = None,
+        mapping_path: Optional[List[str]] = None,
+        mapping: Optional[Dict[str, Extractor]] = None,
+    ):
         super().__init__(body_path, mapping_path, mapping)
         self.adapters = adapters
 
@@ -56,8 +58,7 @@ class CompoundAdapter(Adapter):
         handler = self.get_adapter(m)
         return handler.get_fields_group(m, group_name)
 
-    def get_root_message_field(self, message, parameter_name,
-                               strict=False) -> Any:
+    def get_root_message_field(self, message, parameter_name, strict=False) -> Any:
         # FIXME: Not implemented
         pass
 
@@ -93,27 +94,23 @@ class CompoundAdapterBuilder:
         self._body_path = None
         self._metadata_path = None
 
-    def with_mapping(self, mapping: Dict[str, Extractor]) -> 'CompoundAdapterBuilder':
+    def with_mapping(self, mapping: Dict[str, Extractor]) -> "CompoundAdapterBuilder":
         self._mapping = mapping
         return self
 
-    def with_body_path(self, body_path: List[str]) -> 'CompoundAdapterBuilder':
+    def with_body_path(self, body_path: List[str]) -> "CompoundAdapterBuilder":
         self._body_path = body_path
         return self
 
-    def with_metadata_path(self, metadata_path: List[str]) -> 'CompoundAdapterBuilder':
+    def with_metadata_path(self, metadata_path: List[str]) -> "CompoundAdapterBuilder":
         self._metadata_path = metadata_path
         return self
 
-    def add_adapter(self, condition: Condition, adapter: Adapter) -> 'CompoundAdapterBuilder':
+    def add_adapter(self, condition: Condition, adapter: Adapter) -> "CompoundAdapterBuilder":
         self._conditions_and_adapters.append((condition, adapter))
         return self
 
     def build(self) -> CompoundAdapter:
         return CompoundAdapter(
-            self._conditions_and_adapters,
-            self._body_path,
-            self._metadata_path,
-            self._mapping
+            self._conditions_and_adapters, self._body_path, self._metadata_path, self._mapping
         )
-

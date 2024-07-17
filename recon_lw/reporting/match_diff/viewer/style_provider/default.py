@@ -3,7 +3,7 @@ from recon_lw.reporting.match_diff.viewer.style_provider.base import ErrorExampl
 
 class DefaultErrorExamplesStyleProvider(ErrorExamplesStyleProvider):
     def get_styles(self) -> str:
-        return '''
+        return """
         <style>
             .wrap-collabsible {
                 margin-top: auto;
@@ -74,4 +74,4 @@ class DefaultErrorExamplesStyleProvider(ErrorExamplesStyleProvider):
             }
             
         </style>
-        '''
+        """
