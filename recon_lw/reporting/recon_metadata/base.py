@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from typing import List
 
+
 @dataclass
 class FieldMetadata:
     field_name: str
     description: str
+
 
 @dataclass
 class ReconMetadata:

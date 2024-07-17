@@ -3,7 +3,7 @@ from typing import Dict
 
 
 class MatchesStats:
-    def __init__(self, match_categories: Dict[str, int]=None):
+    def __init__(self, match_categories: Dict[str, int] = None):
         if not match_categories:
             match_categories = defaultdict(int)
         self.match_categories = match_categories

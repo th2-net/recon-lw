@@ -4,6 +4,7 @@ from recon_lw.core.type.types import Message
 from recon_lw.interpretation.adapter import Adapter
 from recon_lw.interpretation.filter.base import Filter
 
+
 class NonEmptyFilter(Filter):
     def __init__(self, field_path: List[str]):
         self.field_path = field_path

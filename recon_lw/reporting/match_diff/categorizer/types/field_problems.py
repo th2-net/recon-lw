@@ -19,4 +19,6 @@ class ProblemFields:
         ]
 
     def get_table(self, recon_name: str):
-        return tabulate.tabulate(self._get_sorted_problem_fields(recon_name), headers=["field", "count"], tablefmt='html')
+        return tabulate.tabulate(
+            self._get_sorted_problem_fields(recon_name), headers=["field", "count"], tablefmt="html"
+        )

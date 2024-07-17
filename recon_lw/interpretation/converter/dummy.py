@@ -1,4 +1,4 @@
-from base import Converter
+from .base import Converter
 from recon_lw.interpretation.adapter import Adapter
 from recon_lw.core.type.types import Message
 
