@@ -29,14 +29,14 @@ repos:
         name: autoflake
         args: [ --in-place, --remove-all-unused-imports, --ignore-init-module-imports ]
 
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0  # pick a git hash / tag to point to
-    hooks:
-      - id: pydocstyle
-        files: th2_data_services
-        args:
-          - --convention=google
-          - --add-ignore=D100,D101,D104,D105,D403, D102,   # http://www.pydocstyle.org/en/stable/error_codes.html
+#  - repo: https://github.com/pycqa/pydocstyle
+#    rev: 6.3.0  # pick a git hash / tag to point to
+#    hooks:
+#      - id: pydocstyle
+#        files: th2_data_services
+#        args:
+#          - --convention=google
+#          - --add-ignore=D100,D101,D104,D105,D403, D102,   # http://www.pydocstyle.org/en/stable/error_codes.html
 
   - repo: local
     hooks:

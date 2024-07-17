@@ -9,20 +9,22 @@ from recon_lw.matching.init_function import SimpleMatcherContext
 
 
 class DefaultFlushFunction(FlushFunction):
-    def __init__(self,
-                 interpretation_function: InterpretationFunctionType,
-                 last_state_matcher: LastStateMatcher = None
-                 ):
+    def __init__(
+        self,
+        interpretation_function: InterpretationFunctionType,
+        last_state_matcher: LastStateMatcher = None,
+    ):
         self.interpretation_function = interpretation_function
         self.last_state_matcher = last_state_matcher
 
-    def flush(self,
-              timestamp: Optional[float],
-              rule: AbstractRule,
-              save_events_func: Callable[[dict], None]
-              ):
+    def flush(
+        self,
+        timestamp: Optional[float],
+        rule: AbstractRule,
+        save_events_func: Callable[[dict], None],
+    ):
         if not isinstance(rule.matcher_context, SimpleMatcherContext):
-            raise ValueError('Matcher context must be SimpleMatcherContext or its extension.')
+            raise ValueError("Matcher context must be SimpleMatcherContext or its extension.")
         DefaultFlushFunction.rule_flush(
             timestamp,
             rule.horizon_delay,
@@ -33,23 +35,31 @@ class DefaultFlushFunction(FlushFunction):
             rule.get_event_sequence(),
             save_events_func,
             rule.get_root_event(),
-            self.last_state_matcher
+            self.last_state_matcher,
         )
 
     @staticmethod
-    def rule_flush(current_ts, horizon_delay, match_index: dict,
-                   time_index: Streams, message_cache: dict,
-                   interpret_func, event_sequence: dict, send_events_func,
-                   parent_event, live_orders_cache):
-
+    def rule_flush(
+        current_ts,
+        horizon_delay,
+        match_index: dict,
+        time_index: Streams,
+        message_cache: dict,
+        interpret_func,
+        event_sequence: dict,
+        send_events_func,
+        parent_event,
+        live_orders_cache,
+    ):
         def flush_old(current_ts, horizon_delay, time_index):
             result = []
             horizon_edge = len(time_index)
             if current_ts is not None:
-                edge_timestamp = {"epochSecond": current_ts["epochSecond"] - horizon_delay,
-                                  "nano": 0}
-                horizon_edge = time_index.bisect_key_left(
-                    time_stamp_key(edge_timestamp))
+                edge_timestamp = {
+                    "epochSecond": current_ts["epochSecond"] - horizon_delay,
+                    "nano": 0,
+                }
+                horizon_edge = time_index.bisect_key_left(time_stamp_key(edge_timestamp))
 
             if horizon_edge > 0:
                 n = 0
@@ -69,7 +79,7 @@ class DefaultFlushFunction(FlushFunction):
                 results = interpret_func(
                     [message_cache_pop(item, message_cache) for item in elem],
                     live_orders_cache,
-                    event_sequence
+                    event_sequence,
                 )
 
             if results is not None:

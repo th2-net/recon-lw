@@ -6,7 +6,7 @@ from recon_lw.core.type.types import Message
 
 
 class BooleanConverter(Converter):
-    def __init__(self, mapping: Dict[str, str], default_val: str=''):
+    def __init__(self, mapping: Dict[str, str], default_val: str = ""):
         self.mapping = mapping
         self.default_val = default_val
 

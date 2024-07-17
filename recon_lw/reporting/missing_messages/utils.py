@@ -7,9 +7,7 @@ from recon_lw.reporting.recon_context.context import ReconContext
 
 
 class MissedMessageHandler:
-    def __init__(self,
-                 recon_context: ReconContext,
-                 miss_categoriser: MissCategorizer):
+    def __init__(self, recon_context: ReconContext, miss_categoriser: MissCategorizer):
         self.recon_context = recon_context
         self.efr = recon_context.get_efr()
         self.mfr = recon_context.get_mfr()
@@ -20,12 +18,12 @@ class MissedMessageHandler:
             if self.efr.get_status(e):
                 continue
             type = self.efr.get_type(e)
-            recon_name = e['reconName']
+            recon_name = e["reconName"]
             attached = e["attachedMessageIds"]
             if type == ReconType.BasicReconMissLeft.value:
-                print("\t\t NO_ORIG", recon_name, attached, e['body']['key'], file)
+                print("\t\t NO_ORIG", recon_name, attached, e["body"]["key"], file)
             elif type == ReconType.BasicReconMissRight.value:
-                print("\t\t NO_COPY", recon_name, attached, e['body']['key'], file)
+                print("\t\t NO_COPY", recon_name, attached, e["body"]["key"], file)
 
     def categorise_and_filter(self, messages):
         missed_message_ids = {}
@@ -34,7 +32,7 @@ class MissedMessageHandler:
             if self.efr.get_status(e):
                 continue
             type = self.efr.get_type(e)
-            recon_name = e['recon_name']
+            recon_name = e["recon_name"]
             attached = e["attachedMessageIds"]
             if type == ReconType.BasicReconMissLeft.value:
                 error_kind = f"no_orig {recon_name}"
@@ -45,5 +43,4 @@ class MissedMessageHandler:
             if error_kind:
                 missed_message_ids[attached[0]] = error_kind
                 error_categories[(error_kind,) + self.miss_categoriser(error_kind, e)] += 1
-        return messages.filter(lambda m: m['messageId'] in missed_message_ids), error_categories
-
+        return messages.filter(lambda m: m["messageId"] in missed_message_ids), error_categories
