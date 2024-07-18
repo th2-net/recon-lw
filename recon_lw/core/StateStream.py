@@ -48,6 +48,7 @@ class StateStream:
         self._events_saver = events_saver
         self._get_next_update_func2 = get_next_update_func2
         self._initial_snapshots_func = initial_snapshots_func
+        self._snapshots_collection = {}
 
     def state_updates(self, stream: Iterable, snapshots_collection):
         if self._initial_snapshots_func is not None:
@@ -96,10 +97,10 @@ class StateStream:
         # if snap_id -- InstrumentId & key -- OrderID
         #   that means that we have OrderBook for every Instrument, and we know
         #   the state of every order.
-        snapshots_collection = defaultdict(dict)
+        self._snapshots_collection = defaultdict(dict)
         updated_snapshots = set()
         last_ts = None
-        for tpl in self.state_updates(stream, snapshots_collection):
+        for tpl in self.state_updates(stream, self._snapshots_collection):
             key = tpl[0]
             ts = tpl[1]
             action = tpl[2]  # Todo -- it's better to use Enum for this.
@@ -108,17 +109,17 @@ class StateStream:
             if last_ts is not None:
                 if not self._combine_instantenious_snapshots:
                     for k in updated_snapshots:
-                        yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
+                        yield self.create_snapshot_event(last_ts, k, self._snapshots_collection[k])
                     updated_snapshots.clear()
                 elif time_stamp_key(ts) != time_stamp_key(last_ts):
                     for k in updated_snapshots:
-                        yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
+                        yield self.create_snapshot_event(last_ts, k, self._snapshots_collection[k])
                     updated_snapshots.clear()
 
             if snap_id is None:
                 continue
 
-            snapshot = snapshots_collection[snap_id]
+            snapshot = self._snapshots_collection[snap_id]
             if action == "c":
                 if key in snapshot:
                     # Consistency error
@@ -173,7 +174,7 @@ class StateStream:
                     updated_snapshots.add(snap_id)
                     last_ts = ts
         for k in updated_snapshots:
-            yield self.create_snapshot_event(last_ts, k, snapshots_collection[k])
+            yield self.create_snapshot_event(last_ts, k, self._snapshots_collection[k])
         updated_snapshots.clear()
 
     def create_snapshot_event(self, ts, snap_id, snapshot_source):
@@ -183,6 +184,9 @@ class StateStream:
             True,
             {"snap_id": snap_id, "ts": ts, "sn": snapshot_source.copy()},
         )
+
+    def get_current_snapshots_collection(self):
+        return self._snapshots_collection
 
 
 #### example
