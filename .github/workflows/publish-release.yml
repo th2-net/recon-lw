@@ -1,6 +1,9 @@
 name: check and publish release Python tarball to PyPi
 
 on:
+  push:
+    branches:
+      - master
   workflow_dispatch:
 
 jobs:
@@ -11,7 +14,7 @@ jobs:
       release-type: release
       style-check-enabled: false
       strict-style-check: false
-      python-check-versions: "['3.8', '3.9', '3.10', '3.11', '3.12']"
+      python-check-versions: "['3.9', '3.10', '3.11', '3.12']"
       test-dir: test/
       test-requirements-files: requirements_dev.txt
       create-tag: true
