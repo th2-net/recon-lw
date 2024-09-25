@@ -1,6 +1,7 @@
 name: check and publish release candidate Python tarball to PyPi
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
 
 jobs:
   build-job:
