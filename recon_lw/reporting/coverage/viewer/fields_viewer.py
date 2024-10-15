@@ -2,8 +2,11 @@ from dataclasses import asdict
 from typing import Dict, List, Any
 import textwrap as tw
 
-from IPython.core.display import HTML
-from IPython.core.display_functions import display
+try:
+    from IPython.core.display import HTML
+    from IPython.core.display_functions import display
+except ImportError:
+    pass # Only required if recon_lw is used in notebooks
 
 from recon_lw.reporting.recon_context.context import ReconContext
 
