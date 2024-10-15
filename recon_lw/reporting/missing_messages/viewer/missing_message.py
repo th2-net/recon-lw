@@ -1,7 +1,11 @@
 from typing import Dict, Tuple
 
 import tabulate
-from IPython.core.display_functions import display
+
+try:
+    from IPython.core.display_functions import display
+except ImportError:
+    pass # Only required if recon_lw is used in notebooks
 
 Count = int
 MissCategory = Tuple
