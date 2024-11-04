@@ -7,6 +7,8 @@ from recon_lw.reporting.match_diff.categorizer import ErrorCategoriesStats, \
 from recon_lw.reporting.match_diff.categorizer.base import IErrorCategorizer
 from recon_lw.reporting.match_diff.categorizer.event_category.base import \
     ErrorCategoryStrategy
+from recon_lw.reporting.match_diff.categorizer.types.miss_categories_stats import MissCategoriesStats
+from recon_lw.reporting.match_diff.categorizer.types.miss_examples import MissExamples
 from recon_lw.reporting.recon_context.context import ReconContext
 
 
@@ -17,8 +19,10 @@ class BasicErrorCategorizer(IErrorCategorizer):
             recon_context: ReconContext,
             error_stats: ErrorCategoriesStats = ErrorCategoriesStats(),
             matches_stats: MatchesStats = MatchesStats(),
+            miss_stats: MissCategoriesStats = MissCategoriesStats(),
             problem_fields: ProblemFields = ProblemFields(),
             error_examples: ErrorExamples = ErrorExamples(),
+            miss_examples: MissExamples = MissExamples()
     ):
         """Categorizer which categorizes events basing on strategies for
         a different type of events.
@@ -33,6 +37,8 @@ class BasicErrorCategorizer(IErrorCategorizer):
             matches_stats=matches_stats,
             problem_fields=problem_fields,
             error_examples=error_examples,
+            miss_examples=miss_examples,
+            miss_stats=miss_stats
         )
         self.error_extractor_strategy = error_extractor_strategy
         self.efr = recon_context.get_efr()
@@ -52,9 +58,12 @@ class BasicErrorCategorizer(IErrorCategorizer):
 
         return orig_msg_id, copy_msg_id
 
+    def _get_attached_msg_ids_all(self, event):
+        return self.efr.get_attached_messages_ids(event)
+
     def process_event(
-            self,
-            event: Union[BasicReconEvent, dict]
+        self,
+        event: Union[BasicReconEvent, dict]
     ):
         # if isinstance(event, dict):
         #     event = BasicReconEvent.from_dict(event)
@@ -67,10 +76,12 @@ class BasicErrorCategorizer(IErrorCategorizer):
         # status = self.efr.get_status(event)
         recon_name = event["reconName"]
         body = event["body"]
+        event_status = event['successful']
 
         body = body if body is not None else {}
         is_match = e_type == ReconType.BasicReconMatch.value
-        is_diff = body.get('diff') is not None
+        diff = body.get('diff')
+        is_diff = diff is not None and len(diff) > 0
 
         if is_match and not is_diff:
             # FIXME:
@@ -79,12 +90,8 @@ class BasicErrorCategorizer(IErrorCategorizer):
             if orig_msg_id is None:
                 return  # TODO: what to do with multimatches
 
-            if orig_msg_id and copy_msg_id:
-                category = self.error_extractor_strategy.match_extractor(
-                    recon_name, orig_msg_id, copy_msg_id, event)
-                recon_name = f"{recon_name} | [{category.name}]"
-
             self._matches_stats.add_match(recon_name)
+            return
 
         elif is_match and is_diff:
             # FIXME:
@@ -103,9 +110,9 @@ class BasicErrorCategorizer(IErrorCategorizer):
 
             # TODO:
             #  event['body']['diff'] -- diff here is actually `diffs` - list of diff
-            
+
             for diff in event['body']['diff']:
-                category = self.error_extractor_strategy.diff_category_extractor(
+                category = self.error_extractor_strategy.category_extractor.extract_diff_category(
                     recon_name, diff, event)
                 if not category:
                     continue
@@ -114,11 +121,15 @@ class BasicErrorCategorizer(IErrorCategorizer):
                 self._problem_fields.add_problem_field(recon_name, field)
                 self._error_stats.add_error_category(recon_name, category)
                 self._error_examples.add_error_example(
-                    recon_name, category, event['attachedMessageIds'])
+                    recon_name, category, event, event['attachedMessageIds'])
 
-        # else:
-        #   When NOT match (miss)
-        # TODO -- probably it's better to add misses handling here
+        else:
+            miss_msgs = self._get_attached_msg_ids_all(event)
+            category = self.error_extractor_strategy.category_extractor.extract_miss_category(recon_name, event)
+
+            if category is not None:
+                self._miss_stats.add_miss_category(recon_name, category)
+                self._miss_examples.add_miss_example(recon_name, category, event, event['attachedMessageIds'])
 
 
 BasicErrorCategoriser = BasicErrorCategorizer

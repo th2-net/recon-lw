@@ -1,40 +1,30 @@
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, Optional
+
+from recon_lw.reporting.known_issues import Issue
 
 
 @dataclass(frozen=True)
 class EventCategory:
     name: str
+    issue: Optional[Issue] = None
+    field: Optional[str] = None
 
 
-class IEventCategoryExtractor(ABC):
-
-    def __call__(self, recon_name: str, orig, copy, event: dict) -> EventCategory:
-        return self.extract_category(recon_name, orig, copy, event)
+class ICategoryExtractor(ABC):
 
     @abstractmethod
-    def extract_category(self, recon_name: str, orig, copy, event: dict) -> EventCategory:
+    def extract_diff_category(self, recon_name: str, diff: dict, event: dict) -> EventCategory:
+        pass
+
+    @abstractmethod
+    def extract_miss_category(self, recon_name: str, event: dict) -> EventCategory:
         pass
 
 
 class IEventCategoryExtractorProtocol(Protocol):
     def __call__(self, recon_name: str, orig, copy, event: dict) -> EventCategory:
-        pass
-
-
-class IDiffCategoryExtractor(ABC):
-    def __call__(self, recon_name: str, diff: dict, event: dict) -> EventCategory:
-        return self.extract_category(recon_name, diff, event)
-
-    @abstractmethod
-    def extract_category(self, recon_name: str, diff: dict, event: dict) -> EventCategory:
-        pass
-
-
-class IDiffCategoryExtractorProtocol(Protocol):
-
-    def __call__(self, recon_name: str, diff: dict, event: dict) -> EventCategory:
         pass
 
 
@@ -44,4 +34,4 @@ class ErrorCategoryStrategy:
     match_diff_extractor: IEventCategoryExtractorProtocol
     miss_left_extractor: IEventCategoryExtractorProtocol
     miss_right_extractor: IEventCategoryExtractorProtocol
-    diff_category_extractor: IDiffCategoryExtractorProtocol
+    category_extractor: ICategoryExtractor

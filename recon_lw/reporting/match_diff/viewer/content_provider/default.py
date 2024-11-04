@@ -25,6 +25,7 @@ class FullMessageExampleContentProvider(IExampleContentProvider):
             err_ex_msg_ids: list[str],
             context: ReconErrorStatsContext,
             msgs_cache: dict[str, Message],
+            event: dict[str, Message],
             category: EventCategory
     ) -> CategoryTableView:
 

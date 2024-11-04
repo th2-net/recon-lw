@@ -21,11 +21,9 @@ class SimpleAdapter(Adapter):
             val = self.get_body(message).get(extractor, Extractor.NOT_EXTRACTED)
         else:
             val = extractor(message)
+
         if strict and val == Extractor.NOT_EXTRACTED:
             raise KeyError(field)
-
-        if val != Extractor.NOT_EXTRACTED:
-            val = str(val)
 
         return val
 

@@ -23,6 +23,7 @@ class IExampleContentProvider(ABC):
             err_ex_msg_ids: list[str],
             context: ReconErrorStatsContext,
             msgs_cache: dict[str, Message],
+            event: dict,
             category: EventCategory
     ) -> CategoryTableView:
         """

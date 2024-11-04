@@ -6,6 +6,8 @@ from recon_lw.reporting.match_diff.categorizer.types.error_categories_stats impo
 from recon_lw.reporting.match_diff.categorizer.types.error_examples import ErrorExamples
 from recon_lw.reporting.match_diff.categorizer.types.field_problems import ProblemFields
 from recon_lw.reporting.match_diff.categorizer.types.match_stats import MatchesStats
+from recon_lw.reporting.match_diff.categorizer.types.miss_categories_stats import MissCategoriesStats
+from recon_lw.reporting.match_diff.categorizer.types.miss_examples import MissExamples
 
 
 @dataclass
@@ -14,3 +16,5 @@ class ReconErrorStatsContext:
     error_stats: ErrorCategoriesStats
     problem_fields: ProblemFields
     matches_stats: MatchesStats
+    misses_stats: MissCategoriesStats
+    misses_examples: MissExamples

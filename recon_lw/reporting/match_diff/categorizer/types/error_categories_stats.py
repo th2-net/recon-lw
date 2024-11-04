@@ -18,11 +18,14 @@ class ErrorCategoriesStats:
 
     def _get_sorted_error_categories(self, recon_name):
         return [
-            (k, v) for k, v in sorted(
+            (k.name, v) for k, v in sorted(
                 self.error_categories[recon_name].items(), key=lambda x: x[1],
                 reverse=True
             )
         ]
+
+    def get_recon_names(self):
+        return self.error_categories.keys()
 
     def get_table_stats(self, recon_name: str):
         return tabulate.tabulate(

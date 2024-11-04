@@ -3,3 +3,4 @@ include requirements.txt
 include package_info.json
 include example
 include example/example.ipynb
+include recon_lw/reporting/template/template_json_report/default_template.jinja

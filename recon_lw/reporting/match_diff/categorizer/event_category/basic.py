@@ -1,17 +1,18 @@
 from typing import Dict, Optional, List
 
-from recon_lw.reporting.known_issues.issue import Issue
-from recon_lw.reporting.match_diff.categorizer.event_category.base import IDiffCategoryExtractor, EventCategory, \
-    IEventCategoryExtractor
+from recon_lw.reporting.known_issues.known_issues import KnownIssues
+from recon_lw.reporting.match_diff.categorizer.event_category.base import EventCategory, \
+    ICategoryExtractor
 
 
-class BasicDiffCategoryExtractor(IDiffCategoryExtractor):
+class BasicCategoryExtractor(ICategoryExtractor):
     def __init__(self,
-                 known_issues: Optional[Dict[str, Issue]] = None,
+                 known_issues: Optional[KnownIssues] = None,
                  text_fields_masked_values: Optional[List[str]] = None,
                  list_fields_masked_values: Optional[List[str]] = None,
-                 additional_field_aliases=None
-    ):
+                 additional_field_aliases=None,
+                 known_issue_text_fields_masked_values: Optional[List[str]] = None
+                 ):
         # TODO
         #   Slava Ermakov
         #       known_issues -- it's better to have separate class for it
@@ -41,19 +42,22 @@ class BasicDiffCategoryExtractor(IDiffCategoryExtractor):
             additional_field_aliases:
         """
         if known_issues is None:
-            known_issues = {}
+            known_issues = KnownIssues()
         if text_fields_masked_values is None:
             text_fields_masked_values = []
         if list_fields_masked_values is None:
             list_fields_masked_values = []
         if additional_field_aliases is None:
             additional_field_aliases = {}
+        if known_issue_text_fields_masked_values is None:
+            known_issue_text_fields_masked_values = []
         self.known_issues = known_issues
         self.text_fields_masked_values = set(text_fields_masked_values)
         self.list_fields = set(list_fields_masked_values)
         self.additional_fields_aliases = additional_field_aliases
+        self.known_issues_text_fields_masked_values = known_issue_text_fields_masked_values
 
-    def extract_category(self, recon_name: str, diff: dict, event: dict) -> EventCategory:
+    def extract_diff_category(self, recon_name: str, diff: dict, event: dict) -> EventCategory:
         """
         This handler will be executed only for [match][diff_found] cases.
 
@@ -62,28 +66,15 @@ class BasicDiffCategoryExtractor(IDiffCategoryExtractor):
             diff: dict representation of `ReconEventDiff`
             event:
 
-        Returns:
+        Returns: EventCategory
 
         """
+        event_status = event['successful']
+        if event_status:
+            return None
         expected = diff["expected"]
         actual = diff["actual"]
         field = diff["field"]
-
-        if isinstance(expected, dict):
-            # TODO
-            #   1. expected['message'] -- we have to describe this format
-            cat = f"{recon_name}: {field}: {expected['message']}"
-            # TODO - later there will  `known_issues` class that will
-            #   have special method to find matched category (not only by the name)
-            #   but also by category parameters
-            issue = self.known_issues.get(cat)
-            if issue:
-                cat += f" | {issue}"
-
-            return EventCategory(cat)
-
-        if isinstance(actual, dict):
-            raise NotImplementedError
 
         expected = self._primify(expected)
         actual = self._primify(actual)
@@ -100,6 +91,13 @@ class BasicDiffCategoryExtractor(IDiffCategoryExtractor):
             actual = "LIST VALUE"
 
         cat = f"{recon_name}: field {field} {expected} != {actual}"
+        if field in self.known_issues_text_fields_masked_values:
+            expected_masked = self._apply_masked_value(expected)
+            actual_masked = self._apply_masked_value(actual)
+            known_issue_cat = f"{recon_name}: field {field} {expected_masked} != {actual_masked}"
+        else:
+            known_issue_cat = cat
+
         additional_fields_info = event['body'].get('additional_fields_info')
         if additional_fields_info:
             additional_info = " | ".join(
@@ -107,10 +105,34 @@ class BasicDiffCategoryExtractor(IDiffCategoryExtractor):
                 for key, values in additional_fields_info.items())
 
             cat = f"{cat} | {additional_info}"
-        issue = self.known_issues.get(cat)
-        if issue:
-            cat += f" | {issue}"
-        return EventCategory(cat)
+            known_issue_cat = f"{known_issue_cat} | {additional_info}"
+
+        issue = self.known_issues.find_known_issue(known_issue_cat, event, recon_name)
+        cat += f" | {issue}"
+        return EventCategory(cat, issue, field)
+
+    def extract_miss_category(self, recon_name: str, event: dict) -> EventCategory:
+        """
+        This handler will be executed only for [miss_orig] and [miss_copy] cases.
+
+        Args:
+            recon_name:
+            diff: dict representation of `ReconEventDiff`
+            event:
+
+        Returns: EventCategory
+
+        """
+        event_status = event['successful']
+        if event_status:
+            return None
+        event_name = event['eventName']
+        recon_name = event['reconName']
+
+        cat = f"{recon_name}: {event_name}"
+        issue = self.known_issues.find_known_issue(cat, event, recon_name)
+        cat += f" | {issue}"
+        return EventCategory(cat, issue)
 
     def _transform_ne(self, val):
         if val == "'_NE_'":
@@ -138,6 +160,9 @@ class BasicDiffCategoryExtractor(IDiffCategoryExtractor):
         return f"'{str}'"
 
 
-class BasicEventCategoryExtractor(IEventCategoryExtractor):
-    def extract_category(self, recon_name: str, orig, copy, event: dict) -> EventCategory:
+class BasicEventCategoryExtractor(ICategoryExtractor):
+    def extract_diff_category(self, recon_name: str, orig, copy, event: dict) -> EventCategory:
+        return EventCategory(recon_name)
+
+    def extract_miss_category(self, recon_name: str, event: dict) -> EventCategory:
         return EventCategory(recon_name)

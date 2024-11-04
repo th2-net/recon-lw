@@ -331,10 +331,11 @@ class MatchDiffViewer:
                     #       to this function.
                     #   2. Cache should be moved outside, I think.
                     table_view = self.content_provider.get_example_content(
-                        err_ex_msg_ids=err_ex_msg_ids,
+                        err_ex_msg_ids=err_ex_msg_ids.message_ids,
                         context=self.context,
                         msgs_cache=self._get_cache(),
                         category=category,
+                        event=err_ex_msg_ids.event
                     )
                     rows.extend(table_view.rows)
 
@@ -404,10 +405,11 @@ class MatchDiffViewer:
                     #       to this function.
                     #   2. Cache should be moved outside, I think.
                     table_view = self.content_provider.get_example_content(
-                        err_ex_msg_ids=err_ex_msg_ids,
+                        err_ex_msg_ids=err_ex_msg_ids.message_ids,
                         context=self.context,
                         msgs_cache=self._get_cache(),
                         category=category,
+                        event=err_ex_msg_ids.event
                     )
                     rows.extend(table_view.rows)
 
@@ -423,3 +425,4 @@ class MatchDiffViewer:
         """
         h = f"h{header_size}"
         fp.write(f"<{h}>{text}</{h}>\n")
+

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Categories and JSON Examples</title>
+    <style>
+        .wrap-collabsible {
+            margin-top: auto;
+        }
+
+        input[type='checkbox'] {
+          display: none;
+        }
+
+        .lbl-toggle {
+          display: block;
+
+          font-weight: bold;
+          font-family: monospace;
+          font-size: 0.75rem;
+          text-align: left;
+
+          padding: 1rem;
+          cursor: pointer;
+
+          border-radius: 7px;
+          transition: all 0.25s ease-out;
+        }
+
+        .lbl-toggle::before {
+          content: ' ';
+          display: inline-block;
+
+          border-top: 5px solid transparent;
+          border-bottom: 5px solid transparent;
+          border-left: 5px solid currentColor;
+          vertical-align: middle;
+          margin-right: .7rem;
+          transform: translateY(-2px);
+
+          transition: transform .2s ease-out;
+        }
+
+        .toggle:checked + .lbl-toggle::before {
+          transform: rotate(90deg) translateX(-3px); }
+
+        .collapsible-content {
+          max-height: 0px;
+          overflow: hidden;
+          transition: max-height .25s ease-in-out;
+          overflow-wrap: break-word;
+        }
+
+        .toggle:checked + .lbl-toggle + .collapsible-content {
+          max-height: 10000vh;
+        }
+
+        .toggle:checked + .lbl-toggle {
+          border-bottom-right-radius: 0;
+          border-bottom-left-radius: 0;
+        }
+
+        .collapsible-content .content-inner {
+          background: white;
+          border-bottom-left-radius: 7px;
+          border-bottom-right-radius: 7px;
+          padding: .5rem 1rem;
+        }
+
+        #code {
+            background-color: white;
+            font-size: 0.75rem;
+        }
+        .category-purple { background-color: #C3B1E1; }
+        .category-brown { background-color: #D97706; }
+        .category-green { background-color: #40bf5a; }
+        .category-red { background-color: #bf3535; }
+        .highlight-red {
+            color: #EDE9FE;
+            background-color: #a43f3f;
+        }
+        .category-blue { background-color: #3587bf; }
+    </style>
+</head>
+<body>
+    {% for recon_config in recon_configs %}
+        <h1>{{ recon_config.table_data.recon_name }}</h1>
+        {% if not recon_config.is_misses %}
+        <h2>{{ recon_config.table_data.recon_name }} full matches = {{ recon_config.table_data.matches }}</h2>
+        <h3>{{ recon_config.table_data.recon_name }} fields with problems</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th style="text-align: right;">Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for field, count in recon_config.table_data.problems.items() %}
+                <tr>
+                    <td>{{ field }}</td>
+                    <td style="text-align: right;">{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <h3>{{ recon_config.table_data.recon_name }} matches with diffs</h3>
+        {% endif %}
+        {% for category in recon_config.categories %}
+            <table border="0" width="100%">
+                <tbody>
+                <tr>
+                    <td style="text-align: left;" class="category-{{ category.color }}" colspan="{{ recon_config.examples_per_row }}">
+                        <b style="font-size: 15px;">{{ category.title }}</b>
+                    </td>
+                </tr>
+                {% for row in range((category.examples|length / recon_config.examples_per_row)|round(0, 'ceil')|int) %}
+                    <tr>
+                    {% for example in category.examples[row * recon_config.examples_per_row:(row + 1) * recon_config.examples_per_row] %}
+                        <td style="text-align: left; vertical-align: top;">
+                        <div class="wrap-collabsible">
+                            <input id="collapsable-{{ category.id }}-{{ loop.index }}-{{ example.title|replace(' ', '-') }}-{{ example.id }}" class="toggle" type="checkbox">
+                            <label for="collapsable-{{ category.id }}-{{ loop.index }}-{{ example.title|replace(' ', '-') }}-{{ example.id }}" class="lbl-toggle">
+                                {{ example.title }}
+                            </label>
+                            <div class="collapsible-content">
+                                <div class="content-inner">
+                                    <div>
+                                        <pre><code id="code">{{ example.value }}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        </td>
+                    {% endfor %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endfor %}
+    {% endfor %}
+</body>
+</html>
