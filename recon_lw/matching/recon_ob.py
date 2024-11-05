@@ -86,41 +86,6 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
                 if log_books_filter is None or log_books_filter(log_book):
                     log_books_collection.append(log_book)
                     obs.append(log_book)
-                    # log_event = recon_lw.create_event("OrderBook:" + mess["sessionId"],
-                    #                                  "OrderBook",
-                    #                                  event_sequence,
-                    #                                  ok=True,
-                    #                                  body=log_book,
-                    #                                  parentId=parent_event["eventId"])
-                    # log_event["attachedMessageIds"] = [mess["messageId"]]
-                    # log_event["scope"] = mess["sessionId"]
-                    # obs.append(log_event)
-
-        results = check_book_rule(book, event_sequence)
-        if results is not None:
-            for r in results:
-                if not r["successful"]:
-                    r["body"]["operation_params"] = initial_parameters
-                    r["body"]["initial_book"] = initial_book
-                    r["body"]["operation"] = operation.__name__
-                    r["body"]["book_id"] = book_id
-                    r["parentEventId"] = parent_event["eventId"]
-                    r["attachedMessageIds"] = [mess["messageId"]]
-                    events.append(r)
-
-    # dbg_event = recon_lw.create_event("DebugEvent",
-    #                                  "DebugEvent",
-    #                                  event_sequence,
-    #                                  ok=True,
-    #                                  body={"operations": [(op[0], op[2]["messageId"]) for op in
-    #                                                       operations_batch],
-    #                                        "len(batch)": len(operations_batch),
-    #                                        "len(obs)": len(obs),
-    #                                        "book_id": book_id},
-    #                                  parentId=parent_event["eventId"])
-    # for tupl in operations_batch:
-    #    dbg_event["attachedMessageIds"].append(tupl[2]["messageId"])
-    # events.append(dbg_event)
 
     # update otv (order time version)
     orders_versions = {}
@@ -176,6 +141,18 @@ def process_operations_batch(operations_batch, events, book_id, book, check_book
                 updated_limit_v2 += 1
             else:
                 obs[i]["aggr_seq"]["limit_v2"] = -1
+    for ob_to_check in obs:
+        results = check_book_rule(ob_to_check, event_sequence)
+        if results is not None:
+            for r in results:
+                if not r["successful"]:
+                    #r["body"]["operation_params"] = initial_parameters
+                    #r["body"]["initial_book"] = initial_book
+                    #r["body"]["operation"] = operation.__name__
+                    #r["body"]["book_id"] = book_id
+                    r["parentEventId"] = parent_event["eventId"]
+                    #r["attachedMessageIds"] = [mess["messageId"]]
+                    events.append(r)
 
 
 class RuleSettings:
