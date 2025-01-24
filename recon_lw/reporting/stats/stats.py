@@ -1,3 +1,5 @@
+from functools import cache
+
 from th2_data_services.utils.category import Category
 from th2_data_services.utils.event_utils.totals import get_category_totals2
 
@@ -9,12 +11,14 @@ class EventStatisticsTableReport:
         self.recon_context = recon_context
         self.efr = recon_context.get_efr()
 
+    @cache
     def get_event_type_report_table(self):
         return get_category_totals2(
             self.recon_context.get_recon_events(),
             [Category("Event Type", self.efr.get_type), Category("Status", self.efr.get_status)],
         ).sort_by(["Event Type", "Status"])
 
+    @cache
     def get_event_names_report_table(self):
         return get_category_totals2(
             self.recon_context.get_recon_events(),
